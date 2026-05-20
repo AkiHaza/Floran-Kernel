@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
        
       - name: Setup SWAP
         uses: pierotofy/set-swap-space@master
@@ -168,7 +168,7 @@ jobs:
           zip -r9 ../"${ZIP_NAME}.zip" * -x .git
 
       - name: Upload ZIP artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Kernel_ZIP_${{ matrix.rom_source }}_${{ matrix.ksu_type }}
           path: "*.zip"
@@ -183,7 +183,7 @@ jobs:
 
     steps:
       - name: Download all ZIP artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: Kernel_ZIP_*
           path: ./release_zips
@@ -199,7 +199,7 @@ jobs:
           echo "REL_TITLE=Floran Kernel Build Release！" >> $GITHUB_ENV
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: "${{ env.REL_TAG }}"
           name: "${{ env.REL_TITLE }}"

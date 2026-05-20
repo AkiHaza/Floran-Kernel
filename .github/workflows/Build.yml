@@ -57,7 +57,7 @@ jobs:
       actions: read
       checks: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       
       - name: Setup SWAP
         uses: pierotofy/set-swap-space@master
@@ -249,7 +249,7 @@ jobs:
           zip -r9 ../"${ZIP_NAME}.zip" * -x .git
 
       - name: Upload ZIP artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Kernel_ZIP
           path: "*.zip"
@@ -265,7 +265,7 @@ jobs:
 
     steps:
       - name: Download ZIP artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: Kernel_ZIP
           path: ./release_zips
@@ -299,7 +299,7 @@ jobs:
           echo "REL_TITLE=${SOURCE} | ${KSU_TYPENAME}" >> $GITHUB_ENV
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: "${{ env.REL_TAG }}"
           name: "${{ env.REL_TITLE }}"
