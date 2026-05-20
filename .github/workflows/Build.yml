@@ -76,8 +76,8 @@ jobs:
             git clone --depth=1 -b sixteen https://github.com/Sukimoka/android_kernel_oneplus_sm8650-modules.git sm8650-modules
 
           elif [[ "${{ inputs.rom_source }}" == "LineageOS" ]]; then
-            git clone --depth=1 -b lineage-23.2 https://github.com/OnePlus-12-Development/android_kernel_oneplus_sm8650.git sm8650
-            git clone --depth=1 -b lineage-23.2 https://github.com/OnePlus-12-Development/android_kernel_oneplus_sm8650-modules.git sm8650-modules
+            git clone --depth=1 -b lineage-23.2 https://github.com/LineageOS/android_kernel_oneplus_sm8650.git sm8650
+            git clone --depth=1 -b lineage-23.2 https://github.com/LineageOS/android_kernel_oneplus_sm8650-modules.git sm8650-modules
 
           elif [[ "${{ inputs.rom_source }}" == "Crdroid" ]]; then
             git clone --depth=1 -b 16.0 https://github.com/crdroidandroid/android_kernel_oneplus_sm8650.git sm8650
