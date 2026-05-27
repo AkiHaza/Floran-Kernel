@@ -2,6 +2,12 @@ name: Matrix Build
 
 on:
   workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Release version (leave empty to use date)"
+        required: false
+        type: string
+        default: ""
 
 jobs:
   build:
@@ -193,8 +199,11 @@ jobs:
         run: |
           TIME_FORM="$(date -u +'%Y-%m-%d %H:%M:%S') UTC"
           echo "TIME_FORM=$TIME_FORM" >> $GITHUB_ENV
-          VERSION=$((${{ github.run_number }} - 4))
-          REL_TAG="FloranKernel-R${VERSION}"
+          if [[ -n "${{ inputs.release_version }}" ]]; then
+            REL_TAG="FloranKernel-${{ inputs.release_version }}"
+          else
+            REL_TAG="FloranKernel-$(date -u +'%y%m%d')"
+          fi
           echo "REL_TAG=$REL_TAG" >> $GITHUB_ENV
           echo "REL_TITLE=Floran Kernel Build Release！" >> $GITHUB_ENV
 
