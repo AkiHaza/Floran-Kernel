@@ -37,8 +37,8 @@ jobs:
       - name: Clone Kernel Source and Download AOSP Clang
         run: |
           if [[ "${{ matrix.rom_source }}" == "YAAP" ]]; then
-            git clone --depth=1 -b sixteen https://github.com/Sukimoka/android_kernel_oneplus_sm8650.git sm8650
-            git clone --depth=1 -b sixteen https://github.com/Sukimoka/android_kernel_oneplus_sm8650-modules.git sm8650-modules
+            git clone --depth=1 -b sixteen https://github.com/AkiHaza/android_kernel_oneplus_sm8650.git sm8650
+            git clone --depth=1 -b sixteen https://github.com/AkiHaza/android_kernel_oneplus_sm8650-modules.git sm8650-modules
           elif [[ "${{ matrix.rom_source }}" == "LineageOS" ]]; then
             git clone --depth=1 -b lineage-23.2 https://github.com/LineageOS/android_kernel_oneplus_sm8650.git sm8650
             git clone --depth=1 -b lineage-23.2 https://github.com/LineageOS/android_kernel_oneplus_sm8650-modules.git sm8650-modules
