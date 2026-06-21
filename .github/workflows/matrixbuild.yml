@@ -3,6 +3,11 @@ name: Matrix Build
 on:
   workflow_dispatch:
     inputs:
+      lz4_enable:
+        description: "Enable lz4 1.10.0 patch"
+        required: true
+        type: boolean
+        default: true
       release_version:
         description: "Release version (leave empty to use date)"
         required: false
@@ -51,6 +56,13 @@ jobs:
           cd toolchains
           curl -LO https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android16-qpr2-release/clang-r563880c.tar.gz
           tar -xf "clang-r563880c.tar.gz" -C clang-r563880c
+
+      - name: Apply lz4 patch
+        if: inputs.lz4_enable
+        run: |
+          cd sm8650
+          cp ../patch/lz4opt.S lib/
+          git apply -p1 < ../patch/lz4.patch || true
 
       - name: Compile Kernel
         run: |
