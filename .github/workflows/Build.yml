@@ -44,6 +44,15 @@ on:
         type: boolean
         default: true
 
+      droidspaces:
+        description: "Droidspaces Container Support"
+        required: true
+        type: choice
+        options:
+          - "none"
+          - "standard"
+          - "extended"
+
       kernel_name:
         description: "Custom Kernel Name"
         required: false
@@ -106,6 +115,48 @@ jobs:
           cd sm8650
           cp ../patch/lz4opt.S lib/
           git apply -p1 < ../patch/lz4.patch || true
+
+      - name: Apply Droidspaces patches
+        if: inputs.droidspaces != 'none' && inputs.rom_source != 'YAAP'
+        run: |
+          cd sm8650
+          
+          echo ">>> 正在添加 Droidspaces 容器支持..."
+          # 开启 Droidspaces 容器所需内核支持
+          echo "CONFIG_PID_NS=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_IPC_NS=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_SYSVIPC=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_DEVTMPFS=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_NAMESPACES=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_POSIX_MQUEUE=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_NETFILTER_XT_TARGET_LOG=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_NETFILTER_XT_MATCH_RECENT=y" >> arch/arm64/configs/gki_defconfig
+          # 开启 NTSync
+          echo "CONFIG_NTSYNC=y" >> arch/arm64/configs/gki_defconfig
+          
+          # 应用 Droidspaces 容器必须补丁
+          echo ">>> 应用 Droidspaces 补丁..."
+          patch -p1 -F 3 < ../patch/fix_sysvipc_kabi_6_7_8.patch || true
+          # 应用 NTSync 补丁
+          patch -p1 -F 3 < ../patch/ntsync_base.patch || true
+          patch -p1 -F 3 < ../patch/ntsync_compat_android14-6.1.patch || true
+
+      - name: Apply Droidspaces Extended patches
+        if: inputs.droidspaces == 'extended' && inputs.rom_source != 'YAAP'
+        run: |
+          cd sm8650
+          
+          echo ">>> 正在启用容器环境扩展支持..."
+          # 开启虚拟 HCI 设备支持
+          echo "CONFIG_BT_HCIVHCI=y" >> arch/arm64/configs/gki_defconfig
+          # 开启 systemd-coredump 支持
+          echo "CONFIG_STATIC_USERMODEHELPER=n" >> arch/arm64/configs/gki_defconfig
+          # 添加 Lindroid EVDI DRM 驱动
+          echo "CONFIG_DRM_LINDROID_EVDI=y" >> arch/arm64/configs/gki_defconfig
+          
+          # 应用 EVDI DRM 补丁
+          patch -p1 -F 3 < ../patch/evdi_drm.patch || true
 
       - name: Compile Kernel
         run: |
@@ -255,6 +306,14 @@ jobs:
           elif [[ "${{ inputs.ksu_type }}" == "None" ]]; then
             ZIP_PREFIX="Non-KSU"
           fi
+          
+          # 添加 Droidspaces 标记
+          if [[ "${{ inputs.droidspaces }}" == "standard" ]]; then
+            ZIP_PREFIX="${ZIP_PREFIX}-dss"
+          elif [[ "${{ inputs.droidspaces }}" == "extended" ]]; then
+            ZIP_PREFIX="${ZIP_PREFIX}-dss-ext"
+          fi
+          
           ZIP_NAME="${ZIP_PREFIX}-$(date -u +"%m%d")"
           git clone --depth=1 https://github.com/Kernel-SU/AnyKernel3.git
           cp sm8650/out/arch/arm64/boot/Image AnyKernel3/Image
@@ -305,6 +364,14 @@ jobs:
           elif [[ "${{ inputs.ksu_type }}" == "None" ]]; then
             KSU_TYPENAME="Non-KSU"
           fi
+          
+          # 添加 Droidspaces 信息
+          if [[ "${{ inputs.droidspaces }}" == "standard" ]]; then
+            KSU_TYPENAME="${KSU_TYPENAME} + Droidspaces"
+          elif [[ "${{ inputs.droidspaces }}" == "extended" ]]; then
+            KSU_TYPENAME="${KSU_TYPENAME} + Droidspaces Extended"
+          fi
+          
           echo "KSU_TYPENAME=${KSU_TYPENAME}" >> $GITHUB_ENV
 
           SOURCE="${{ inputs.rom_source }}"
@@ -323,6 +390,7 @@ jobs:
             | Source | ${{ inputs.rom_source }} |
             | Clang | clang-r563880c |
             | KernelSU | ${{ env.KSU_TYPENAME }} |
+            | Droidspaces | ${{ inputs.droidspaces }} |
             | Built at | ${{ env.TIME_FORM }} |
 
             **Manager downloads:**

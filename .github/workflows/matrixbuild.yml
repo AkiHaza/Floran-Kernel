@@ -8,6 +8,14 @@ on:
         required: true
         type: boolean
         default: true
+      droidspaces:
+        description: "Droidspaces Container Support"
+        required: true
+        type: choice
+        options:
+          - "none"
+          - "standard"
+          - "extended"
       release_version:
         description: "Release version (leave empty to use date)"
         required: false
@@ -63,6 +71,40 @@ jobs:
           cd sm8650
           cp ../patch/lz4opt.S lib/
           git apply -p1 < ../patch/lz4.patch || true
+
+      - name: Apply Droidspaces patches
+        if: inputs.droidspaces != 'none' && matrix.rom_source != 'YAAP'
+        run: |
+          cd sm8650
+          
+          echo ">>> 正在添加 Droidspaces 容器支持..."
+          echo "CONFIG_PID_NS=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_IPC_NS=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_SYSVIPC=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_DEVTMPFS=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_NAMESPACES=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_POSIX_MQUEUE=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_NETFILTER_XT_TARGET_LOG=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_NETFILTER_XT_MATCH_RECENT=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_NTSYNC=y" >> arch/arm64/configs/gki_defconfig
+          
+          echo ">>> 应用 Droidspaces 补丁..."
+          patch -p1 -F 3 < ../patch/fix_sysvipc_kabi_6_7_8.patch || true
+          patch -p1 -F 3 < ../patch/ntsync_base.patch || true
+          patch -p1 -F 3 < ../patch/ntsync_compat_android14-6.1.patch || true
+
+      - name: Apply Droidspaces Extended patches
+        if: inputs.droidspaces == 'extended' && matrix.rom_source != 'YAAP'
+        run: |
+          cd sm8650
+          
+          echo ">>> 正在启用容器环境扩展支持..."
+          echo "CONFIG_BT_HCIVHCI=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_STATIC_USERMODEHELPER=n" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_DRM_LINDROID_EVDI=y" >> arch/arm64/configs/gki_defconfig
+          
+          patch -p1 -F 3 < ../patch/evdi_drm.patch || true
 
       - name: Compile Kernel
         run: |
@@ -177,6 +219,12 @@ jobs:
             ZIP_PREFIX="KernelSU-Next-SUSFS"
           elif [[ "${{ matrix.ksu_type }}" == "ReSukiSU-susfs" ]]; then
             ZIP_PREFIX="ReSukiSU-SUSFS"
+          fi
+          
+          if [[ "${{ inputs.droidspaces }}" == "standard" ]]; then
+            ZIP_PREFIX="${ZIP_PREFIX}-dss"
+          elif [[ "${{ inputs.droidspaces }}" == "extended" ]]; then
+            ZIP_PREFIX="${ZIP_PREFIX}-dss-ext"
           fi
           
           ZIP_NAME="${{ matrix.rom_source }}-${ZIP_PREFIX}-Floran-$(date -u +"%m%d")"
