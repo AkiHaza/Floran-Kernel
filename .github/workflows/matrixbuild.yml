@@ -66,7 +66,7 @@ jobs:
           tar -xf "clang-r563880c.tar.gz" -C clang-r563880c
 
       - name: Apply lz4 patch
-        if: inputs.lz4_enable
+        if: inputs.lz4_enable && matrix.rom_source != 'YAAP'
         run: |
           cd sm8650
           cp ../patch/lz4opt.S lib/
