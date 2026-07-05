@@ -106,8 +106,8 @@ jobs:
 
           mkdir -p toolchains/clang-r563880c
           cd toolchains
-          curl -LO https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android16-qpr2-release/clang-r563880c.tar.gz
-          tar -xf "clang-r563880c.tar.gz" -C clang-r563880c
+          curl -LO https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r563880c/linux-x86-refs_heads_android16-qpr2-release-clang-r563880c.tar.gz
+          tar -xf "linux-x86-refs_heads_android16-qpr2-release-clang-r563880c.tar.gz" -C clang-r563880c
 
       - name: Apply lz4 patch
         if: inputs.lz4_enable && inputs.rom_source != 'YAAP'
