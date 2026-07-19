@@ -118,31 +118,6 @@ jobs:
 
           cd sm8650
 
-          # Fix extract-cert.c: key_pass is guarded by USE_PKCS11_ENGINE
-          # while the PKCS#11 ENGINE path still references it unconditionally.
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path("certs/extract-cert.c")
-          text = path.read_text()
-          decl = """#ifdef USE_PKCS11_ENGINE
-          static const char *key_pass;
-          #endif"""
-          assn = """#ifdef USE_PKCS11_ENGINE
-          \tkey_pass = getenv("KBUILD_SIGN_PIN");
-          #endif"""
-          if decl not in text or assn not in text:
-              raise SystemExit(
-                  "Unsupported extract-cert.c layout: refusing key_pass fix"
-              )
-          text = text.replace(decl, "static const char *key_pass;", 1)
-          text = text.replace(
-              assn,
-              '\tkey_pass = getenv("KBUILD_SIGN_PIN");',
-              1,
-          )
-          path.write_text(text)
-          PY
-
           if [[ "${{ matrix.ksu_type }}" == KernelSU-Next-susfs ]]; then
             curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
           elif [[ "${{ matrix.ksu_type }}" == ReSukiSU-susfs ]]; then

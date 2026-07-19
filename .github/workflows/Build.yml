@@ -122,6 +122,7 @@ jobs:
           cd sm8650
           
           echo ">>> 正在添加 Droidspaces 容器支持..."
+          # 开启 Droidspaces 容器所需内核支持
           echo "CONFIG_PID_NS=y" >> arch/arm64/configs/gki_defconfig
           echo "CONFIG_IPC_NS=y" >> arch/arm64/configs/gki_defconfig
           echo "CONFIG_SYSVIPC=y" >> arch/arm64/configs/gki_defconfig
@@ -131,10 +132,13 @@ jobs:
           echo "CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y" >> arch/arm64/configs/gki_defconfig
           echo "CONFIG_NETFILTER_XT_TARGET_LOG=y" >> arch/arm64/configs/gki_defconfig
           echo "CONFIG_NETFILTER_XT_MATCH_RECENT=y" >> arch/arm64/configs/gki_defconfig
+          # 开启 NTSync
           echo "CONFIG_NTSYNC=y" >> arch/arm64/configs/gki_defconfig
           
+          # 应用 Droidspaces 容器必须补丁
           echo ">>> 应用 Droidspaces 补丁..."
           patch -p1 -F 3 < ../patch/fix_sysvipc_kabi_6_7_8.patch || true
+          # 应用 NTSync 补丁
           patch -p1 -F 3 < ../patch/ntsync_base.patch || true
           patch -p1 -F 3 < ../patch/ntsync_compat_android14-6.1.patch || true
 
@@ -144,10 +148,14 @@ jobs:
           cd sm8650
           
           echo ">>> 正在启用容器环境扩展支持..."
+          # 开启虚拟 HCI 设备支持
           echo "CONFIG_BT_HCIVHCI=y" >> arch/arm64/configs/gki_defconfig
+          # 开启 systemd-coredump 支持
           echo "CONFIG_STATIC_USERMODEHELPER=n" >> arch/arm64/configs/gki_defconfig
+          # 添加 Lindroid EVDI DRM 驱动
           echo "CONFIG_DRM_LINDROID_EVDI=y" >> arch/arm64/configs/gki_defconfig
           
+          # 应用 EVDI DRM 补丁
           patch -p1 -F 3 < ../patch/evdi_drm.patch || true
 
       - name: Compile Kernel
@@ -161,31 +169,6 @@ jobs:
           export CC=clang CXX=clang++ HOSTCC=clang HOSTCXX=clang++ LD=ld.lld AR=llvm-ar NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip
 
           cd sm8650
-
-          # Fix extract-cert.c: key_pass is guarded by USE_PKCS11_ENGINE
-          # while the PKCS#11 ENGINE path still references it unconditionally.
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path("certs/extract-cert.c")
-          text = path.read_text()
-          decl = """#ifdef USE_PKCS11_ENGINE
-          static const char *key_pass;
-          #endif"""
-          assn = """#ifdef USE_PKCS11_ENGINE
-          \tkey_pass = getenv("KBUILD_SIGN_PIN");
-          #endif"""
-          if decl not in text or assn not in text:
-              raise SystemExit(
-                  "Unsupported extract-cert.c layout: refusing key_pass fix"
-              )
-          text = text.replace(decl, "static const char *key_pass;", 1)
-          text = text.replace(
-              assn,
-              '\tkey_pass = getenv("KBUILD_SIGN_PIN");',
-              1,
-          )
-          path.write_text(text)
-          PY
 
           if [[ "${{ inputs.ksu_type }}" == KernelSU-Official* ]]; then
             curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
@@ -326,6 +309,7 @@ jobs:
             ZIP_PREFIX="Non-KSU"
           fi
           
+          # 添加 Droidspaces 标记
           if [[ "${{ inputs.droidspaces }}" == "standard" ]]; then
             ZIP_PREFIX="${ZIP_PREFIX}-dss"
           elif [[ "${{ inputs.droidspaces }}" == "extended" ]]; then
@@ -383,6 +367,7 @@ jobs:
             KSU_TYPENAME="Non-KSU"
           fi
           
+          # 添加 Droidspaces 信息
           if [[ "${{ inputs.droidspaces }}" == "standard" ]]; then
             KSU_TYPENAME="${KSU_TYPENAME} + Droidspaces"
           elif [[ "${{ inputs.droidspaces }}" == "extended" ]]; then
