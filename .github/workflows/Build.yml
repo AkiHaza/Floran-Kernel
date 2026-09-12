@@ -85,14 +85,14 @@ jobs:
           sudo apt update
           sudo apt install -y bc bison flex libssl-dev libelf-dev libdw-dev build-essential lz4 git python3 curl dwarves cpio gcc-aarch64-linux-gnu
           
-      - name: Clone Kernel Source and Download AOSP Clang
+      - name: Clone Kernel Source and Download Clang Toolchain
         run: |
           if [[ "${{ inputs.rom_source }}" == "YAAP-16" ]]; then
             git clone --depth=1 -b sixteen https://github.com/AkiHaza/android_kernel_oneplus_sm8650.git sm8650
             git clone --depth=1 -b sixteen https://github.com/AkiHaza/android_kernel_oneplus_sm8650-modules.git sm8650-modules
 
           elif [[ "${{ inputs.rom_source }}" == "YAAP-17" ]]; then
-            git clone --depth=1 -b seventeen https://github.com/AkiHaza/android_kernel_oneplus_sm8650.git sm8650
+            git clone --depth=1 -b dev https://github.com/AkiHaza/android_kernel_oneplus_sm8650.git sm8650
             git clone --depth=1 -b seventeen https://github.com/AkiHaza/android_kernel_oneplus_sm8650-modules.git sm8650-modules
 
           elif [[ "${{ inputs.rom_source }}" == "LineageOS" ]]; then
@@ -111,7 +111,7 @@ jobs:
 
           if [[ "${{ inputs.rom_source }}" == "YAAP-17" ]]; then
             CLANG_VERSION="clang-r596125"
-            CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android17-release/clang-r596125.tar.gz"
+            CLANG_URL="https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r596125/linux-x86-refs_heads_android17-release-clang-r596125.tar.gz"
           else
             CLANG_VERSION="clang-r563880c"
             CLANG_URL="https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r563880c/linux-x86-refs_heads_android16-qpr2-release-clang-r563880c.tar.gz"
@@ -412,7 +412,7 @@ jobs:
 
           if [[ "${{ inputs.rom_source }}" == "YAAP-17" ]]; then
             CLANG_VERSION="clang-r596125"
-            CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android17-release/clang-r596125.tar.gz"
+            CLANG_URL="https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r596125/linux-x86-refs_heads_android17-release-clang-r596125.tar.gz"
           else
             CLANG_VERSION="clang-r563880c"
             CLANG_URL="https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r563880c/linux-x86-refs_heads_android16-qpr2-release-clang-r563880c.tar.gz"

@@ -62,12 +62,12 @@
 
 矩阵构建工作流固定使用 `YAAP-17`，不再构建 `YAAP-16`。
 
-YAAP-17 使用的 Clang 归档直链：[`clang-r596125.tar.gz`](https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android17-release/clang-r596125.tar.gz)
+YAAP-17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r596125/linux-x86-refs_heads_android17-release-clang-r596125.tar.gz)
 
 | ROM 源码 | Kernel 仓库 / 分支 | Modules 仓库 / 分支 |
 |---|---|---|
 | YAAP-16 | [`AkiHaza/android_kernel_oneplus_sm8650`](https://github.com/AkiHaza/android_kernel_oneplus_sm8650) / `sixteen` | [`AkiHaza/android_kernel_oneplus_sm8650-modules`](https://github.com/AkiHaza/android_kernel_oneplus_sm8650-modules) / `sixteen` |
-| YAAP-17 | [`AkiHaza/android_kernel_oneplus_sm8650`](https://github.com/AkiHaza/android_kernel_oneplus_sm8650) / `seventeen` | [`AkiHaza/android_kernel_oneplus_sm8650-modules`](https://github.com/AkiHaza/android_kernel_oneplus_sm8650-modules) / `seventeen` |
+| YAAP-17 | [`AkiHaza/android_kernel_oneplus_sm8650`](https://github.com/AkiHaza/android_kernel_oneplus_sm8650) / `dev` | [`AkiHaza/android_kernel_oneplus_sm8650-modules`](https://github.com/AkiHaza/android_kernel_oneplus_sm8650-modules) / `seventeen` |
 | LineageOS | [`LineageOS/android_kernel_oneplus_sm8650`](https://github.com/LineageOS/android_kernel_oneplus_sm8650) / `lineage-23.2` | [`LineageOS/android_kernel_oneplus_sm8650-modules`](https://github.com/LineageOS/android_kernel_oneplus_sm8650-modules) / `lineage-23.2` |
 | crDroid | [`crdroidandroid/android_kernel_oneplus_sm8650`](https://github.com/crdroidandroid/android_kernel_oneplus_sm8650) / `16.0` | [`crdroidandroid/android_kernel_oneplus_sm8650-modules`](https://github.com/crdroidandroid/android_kernel_oneplus_sm8650-modules) / `16.0` |
 | PixelOS | [`PixelOS-Devices/android_kernel_oneplus_sm8650`](https://github.com/PixelOS-Devices/android_kernel_oneplus_sm8650) / `sixteen-qpr2` | [`PixelOS-Devices/android_kernel_oneplus_sm8650-modules`](https://github.com/PixelOS-Devices/android_kernel_oneplus_sm8650-modules) / `sixteen-qpr2` |
@@ -129,7 +129,7 @@ sudo apt install -y \
   lz4 git python3 curl dwarves cpio gcc-aarch64-linux-gnu
 ```
 
-编译时 YAAP-17 使用 AOSP Clang `clang-r596125`，其他源码使用 `clang-r563880c`，并执行：
+编译时 YAAP-17 使用 Release 中的 `clang-r596125` 工具链产物，其他源码使用 `clang-r563880c`，并执行：
 
 ```bash
 make O=out gki_defconfig vendor/pineapple_GKI.config vendor/oplus/pineapple_GKI.config
