@@ -17,19 +17,16 @@ on:
         description: "Enable lz4 1.10.0 patch"
         required: true
         type: boolean
-        default: true
 
       netfilter:
         description: "Enable IPSET & IPv6_NAT"
         required: true
         type: boolean
-        default: true
 
       ccm:
         description: "Enable BBR & ECN"
         required: true
         type: boolean
-        default: true
 
       droidspaces:
         description: "Droidspaces Container Support"
@@ -46,7 +43,6 @@ on:
         description: "创建 GitHub Release？"
         required: true
         type: boolean
-        default: true
 
 jobs:
   build:
@@ -214,19 +210,19 @@ jobs:
           cd sm8650
 
           if [[ "${{ inputs.ksu_type }}" == "KernelSU-backslashxx-susfs" ]]; then
-            curl -LSs "https://raw.githubusercontent.com/backslashxx/KernelSU/main/kernel/setup.sh" | bash -s main
+            curl -fLSs "https://raw.githubusercontent.com/backslashxx/KernelSU/master/kernel/setup.sh" | bash -s master
 
           elif [[ "${{ inputs.ksu_type }}" == KernelSU-Official* ]]; then
-            curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
+            curl -fLSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
 
           elif [[ "${{ inputs.ksu_type }}" == KernelSU-Next-susfs ]]; then
-            curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
+            curl -fLSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
 
           elif [[ "${{ inputs.ksu_type }}" == KernelSU-Next ]]; then
-            curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s main
+            curl -fLSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s main
 
           elif [[ "${{ inputs.ksu_type }}" == ReSukiSU* ]]; then
-            curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash -s main
+            curl -fLSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash -s main
           fi
 
           if [[ "${{ inputs.ksu_type }}" == *susfs ]]; then
@@ -449,7 +445,7 @@ jobs:
           fi
 
           ZIP_NAME="${{ inputs.rom_source }}-${ZIP_PREFIX}-$(date -u +"%m%d")"
-          git clone --depth=1 https://github.com/Kernel-SU/AnyKernel3.git
+          git clone --depth=1 https://github.com/AkiHaza/AnyKernel3.git
           cp sm8650/out/arch/arm64/boot/Image AnyKernel3/Image
           cd AnyKernel3
           zip -r9 ../"${ZIP_NAME}.zip" * -x .git

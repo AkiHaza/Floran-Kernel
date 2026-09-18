@@ -147,7 +147,7 @@ make -j"$(nproc)" O=out Image
 
 ## 致谢
 
-- [AnyKernel3](https://github.com/Kernel-SU/AnyKernel3)
+- [AnyKernel3](https://github.com/AkiHaza/AnyKernel3)
 - [KernelSU](https://github.com/tiann/KernelSU)
 - [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)
 - [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU)

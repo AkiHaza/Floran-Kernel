@@ -28,6 +28,7 @@ jobs:
     permissions:
       actions: read
       checks: read
+      contents: read
     strategy:
       matrix:
         rom_source: [YAAP-17, Crdroid, LineageOS]
@@ -175,11 +176,11 @@ jobs:
           cd sm8650
 
           if [[ "${{ matrix.ksu_type }}" == KernelSU-backslashxx-susfs ]]; then
-            curl -LSs "https://raw.githubusercontent.com/backslashxx/KernelSU/main/kernel/setup.sh" | bash -s main
+            curl -fLSs "https://raw.githubusercontent.com/backslashxx/KernelSU/master/kernel/setup.sh" | bash -s master
           elif [[ "${{ matrix.ksu_type }}" == KernelSU-Next-susfs ]]; then
-            curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
+            curl -fLSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
           elif [[ "${{ matrix.ksu_type }}" == ReSukiSU-susfs ]]; then
-            curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash -s main
+            curl -fLSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash -s main
           fi
 
           # Apply the original SUSFS gki-android14-6.1 patch from simonpunk.
@@ -373,7 +374,7 @@ jobs:
           fi
           
           ZIP_NAME="${{ matrix.rom_source }}-${ZIP_PREFIX}-Floran-$(date -u +"%m%d")"
-          git clone --depth=1 https://github.com/Kernel-SU/AnyKernel3.git
+          git clone --depth=1 https://github.com/AkiHaza/AnyKernel3.git
           cp sm8650/out/arch/arm64/boot/Image AnyKernel3/Image
           cd AnyKernel3
           zip -r9 ../"${ZIP_NAME}.zip" * -x .git
@@ -410,7 +411,7 @@ jobs:
             REL_TAG="FloranKernel-$(date -u +'%y%m%d')"
           fi
           echo "REL_TAG=$REL_TAG" >> $GITHUB_ENV
-          echo "REL_TITLE=Floran Kernel Build Release！" >> $GITHUB_ENV
+          echo "REL_TITLE=Floran Kernel Build Release" >> "$GITHUB_ENV"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
