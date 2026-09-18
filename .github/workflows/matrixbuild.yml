@@ -390,7 +390,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      packages: write
       actions: read
 
     steps:
