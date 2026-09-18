@@ -1,16 +1,15 @@
-name: Build LineageOS Kernel
+name: Build YAAP Kernel
 
 on:
   workflow_dispatch:
     inputs:
-      rom_source:
-        description: "ROM Kernel Source Code"
+      yaap_version:
+        description: "YAAP Version"
         required: true
         type: choice
         options:
-          - LineageOS
-          - Crdroid
-          - PixelOS
+          - YAAP-17
+          - YAAP-16
 
       ksu_type:
         description: "KernelSU Version"
@@ -26,12 +25,6 @@ on:
           - ReSukiSU-susfs
           - None
 
-      lz4_enable:
-        description: "Enable lz4 1.10.0 patch"
-        required: true
-        type: boolean
-        default: true
-
       netfilter:
         description: "Enable IPSET & IPv6_NAT"
         required: true
@@ -43,15 +36,6 @@ on:
         required: true
         type: boolean
         default: true
-
-      droidspaces:
-        description: "Droidspaces Container Support"
-        required: true
-        type: choice
-        options:
-          - "none"
-          - "standard"
-          - "extended"
 
       kernel_name:
         description: "Custom Kernel Name"
@@ -74,12 +58,12 @@ jobs:
   build:
     uses: ./.github/workflows/_build-kernel.yml
     with:
-      rom_source: ${{ inputs.rom_source }}
+      rom_source: ${{ inputs.yaap_version }}
       ksu_type: ${{ inputs.ksu_type }}
-      lz4_enable: ${{ inputs.lz4_enable }}
+      lz4_enable: false
       netfilter: ${{ inputs.netfilter }}
       ccm: ${{ inputs.ccm }}
-      droidspaces: ${{ inputs.droidspaces }}
+      droidspaces: none
       kernel_name: ${{ inputs.kernel_name }}
       create_release: ${{ inputs.create_release }}
     secrets: inherit

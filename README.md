@@ -38,7 +38,7 @@
 
 1. Fork 本仓库。
 2. 打开仓库的 **Actions** 页面。
-3. 选择 **Build Kernel** 工作流。
+3. 除 YAAP 外的内核变种选择 **Build LineageOS Kernel**；YAAP 构建选择 **Build YAAP Kernel**。
 4. 点击 **Run workflow**，按需填写构建参数。
 5. 等待工作流完成：
    - 可在对应工作流运行页面的 **Artifacts** 下载 ZIP；
@@ -48,7 +48,9 @@
 
 | 参数 | 说明 |
 |---|---|
-| `ROM Kernel Source Code` | 选择内核源码：`YAAP-16`、`YAAP-17`、`LineageOS`、`Crdroid` 或 `PixelOS`。 |
+| `Build LineageOS Kernel` | 选择并构建 `LineageOS`、`Crdroid` 或 `PixelOS` 内核；该工作流提供 LZ4、Droidspaces 等通用选项。 |
+| `Build YAAP Kernel` | 在 `YAAP-16`（`sixteen`）和 `YAAP-17`（kernel `dev` + modules `seventeen`）之间选择；YAAP 工作流固定不应用 LZ4/Droidspaces 补丁。 |
+| `ROM Kernel Source Code` | 在 `Build LineageOS Kernel` 中选择 `LineageOS`、`Crdroid` 或 `PixelOS`。 |
 | `KernelSU Version` | 选择 KernelSU 集成方案，或选择 `None` 构建非 KernelSU 内核。 |
 | `Enable lz4 1.10.0 patch` | 为非 YAAP-16/YAAP-17 源码应用 LZ4 1.10.0 补丁。 |
 | `Enable IPSET & IPv6_NAT` | 启用 IPSet、IPv6 NAT 及相关 Netfilter 配置。 |
@@ -141,7 +143,7 @@ make O=out gki_defconfig vendor/pineapple_GKI.config vendor/oplus/pineapple_GKI.
 make -j"$(nproc)" O=out Image
 ```
 
-完整的源码拉取、补丁应用、KernelSU/SUSFS 集成与打包步骤，请以 [`.github/workflows/Build.yml`](.github/workflows/Build.yml) 为准。
+完整的源码拉取、补丁应用、KernelSU/SUSFS 集成与打包步骤，请以 [`.github/workflows/Build.yml`](.github/workflows/Build.yml)（LineageOS）和 [`.github/workflows/build-yaap.yml`](.github/workflows/build-yaap.yml)（YAAP）为准；两者共享 [`.github/workflows/_build-kernel.yml`](.github/workflows/_build-kernel.yml) 中的构建逻辑。
 
 ## 致谢
 
