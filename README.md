@@ -17,6 +17,7 @@
   - PixelOS
 - 支持多种 Root 内核方案：
   - KernelSU Official
+  - backslashxx KernelSU + SUSFS
   - KernelSU-Next
   - ReSukiSU
   - 上述方案的 SUSFS 变体（部分组合）
@@ -80,17 +81,21 @@ YAAP-17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://githu
 |---|---|
 | `KernelSU-Official` | 官方 KernelSU |
 | `KernelSU-Official-susfs` | 官方 KernelSU + SUSFS |
+| `KernelSU-backslashxx-susfs` | backslashxx KernelSU + SUSFS |
 | `KernelSU-Next` | KernelSU-Next |
 | `KernelSU-Next-susfs` | KernelSU-Next + SUSFS |
 | `ReSukiSU` | ReSukiSU |
 | `ReSukiSU-susfs` | ReSukiSU + SUSFS |
 | `None` | 不集成 KernelSU |
 
-选择带 `susfs` 的方案时，工作流会拉取 `susfs4ksu` 的 `gki-android14-6.1` 分支，并启用 SUSFS 相关配置。
+选择带 `susfs` 的方案时，工作流会拉取 [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) 的 `gki-android14-6.1` 分支，并启用 SUSFS 相关配置。`KernelSU-backslashxx-susfs` 方案会使用 [backslashxx/KernelSU](https://github.com/backslashxx/KernelSU) fork，再叠加 simonpunk 的 SUSFS 补丁。
+
+由于不同 ROM 源码的 include 上下文可能不同，工作流会通过内联 shell 逻辑补齐 `fs/namespace.c` 和 `fs/super.c` 所需的 SUSFS 声明，并仅接受已知的 include 冲突；出现其他补丁 reject 时会直接终止构建，避免生成不完整的 SUSFS 内核。
 
 刷入集成 KernelSU 的内核后，请安装与所选方案相对应的管理器：
 
 - [KernelSU](https://github.com/tiann/KernelSU)
+- [backslashxx/KernelSU](https://github.com/backslashxx/KernelSU)
 - [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)
 - [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU)
 
