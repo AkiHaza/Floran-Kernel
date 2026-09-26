@@ -53,6 +53,30 @@ on:
           - "standard"
           - "extended"
 
+      docker:
+        description: "Docker Container Support"
+        required: true
+        type: boolean
+        default: false
+
+      docker_userns:
+        description: "Docker USER_NS (rootless / userns-remap). Confirmed safe (boots)"
+        required: false
+        type: boolean
+        default: true
+
+      docker_fs:
+        description: "Docker btrfs storage driver support"
+        required: false
+        type: boolean
+        default: true
+
+      vm:
+        description: "Virtual Machine (KVM) Support"
+        required: true
+        type: boolean
+        default: false
+
       kernel_name:
         description: "Custom Kernel Name"
         required: false
@@ -80,6 +104,10 @@ jobs:
       netfilter: ${{ inputs.netfilter }}
       ccm: ${{ inputs.ccm }}
       droidspaces: ${{ inputs.droidspaces }}
+      docker: ${{ inputs.docker }}
+      docker_userns: ${{ inputs.docker_userns }}
+      docker_fs: ${{ inputs.docker_fs }}
+      vm: ${{ inputs.vm }}
       kernel_name: ${{ inputs.kernel_name }}
       create_release: ${{ inputs.create_release }}
     secrets: inherit

@@ -33,6 +33,28 @@ on:
         required: true
         type: string
 
+      docker:
+        description: "Docker Container Support"
+        required: true
+        type: boolean
+
+      docker_userns:
+        description: "Docker USER_NS (rootless / userns-remap). Confirmed safe (boots)"
+        required: false
+        type: boolean
+        default: true
+
+      docker_fs:
+        description: "Docker btrfs storage driver support"
+        required: false
+        type: boolean
+        default: true
+
+      vm:
+        description: "Virtual Machine (KVM) Support"
+        required: true
+        type: boolean
+
       kernel_name:
         description: "Custom Kernel Name"
         required: false
@@ -111,8 +133,16 @@ jobs:
         if: inputs.lz4_enable && inputs.rom_source != 'YAAP-16' && inputs.rom_source != 'YAAP-17'
         run: |
           cd sm8650
-          cp ../patch/lz4opt.S lib/
-          git apply -p1 < ../patch/lz4.patch || true
+          # lz4.patch 是基于特定源码树（含 fs/f2fs/lz4armv8/）重构的，部分 ROM
+          # （如 crDroid）f2fs 结构不同会导致整体 apply 失败。
+          # 先做 --check，不兼容时干净跳过（保留 GKI 原生 LZ4），避免残留孤立文件。
+          if git apply --check -p1 < ../patch/lz4.patch 2>/dev/null; then
+            cp ../patch/lz4opt.S lib/
+            git apply -p1 < ../patch/lz4.patch
+            echo "LZ4 1.10.0 patch applied."
+          else
+            echo "LZ4 patch not compatible with ${{ inputs.rom_source }} source; skipping (stock GKI LZ4 retained)."
+          fi
 
       - name: Apply Droidspaces patches
         if: inputs.droidspaces != 'none' && inputs.rom_source != 'YAAP-16' && inputs.rom_source != 'YAAP-17'
@@ -156,6 +186,46 @@ jobs:
 
           # 应用 EVDI DRM 补丁
           patch -p1 -F 3 < ../patch/evdi_drm.patch || true
+
+      - name: Apply Docker support
+        if: inputs.docker
+        run: |
+          cd sm8650
+
+          echo ">>> 正在启用 Docker 容器支持（仅已验证可开机的配置）..."
+          # 安全底座：namespace / cgroup v2 控制器 / overlay & seccomp（build F 证实可开机）。
+          cat ../patch/docker.config >> arch/arm64/configs/gki_defconfig
+          # USER_NS：rootless / userns-remap（build K2 证实可开机）。
+          if [[ "${{ inputs.docker_userns }}" == "true" ]]; then
+            cat ../patch/docker-userns.config >> arch/arm64/configs/gki_defconfig
+          fi
+          # btrfs 存储驱动（build F 证实可开机）。
+          if [[ "${{ inputs.docker_fs }}" == "true" ]]; then
+            cat ../patch/docker-fs.config >> arch/arm64/configs/gki_defconfig
+          fi
+          # 注：以下三组经单变量二分实测确认会在 sm8650/pineapple 上 bootloop，已从本 action 彻底移除：
+          #   - 网络组(bridge/nftables/IPVS/SCTP/XFRM)：把原厂 =m 网络组件翻成 =y，破坏高通网络 vendor 模块 probe。
+          #   - CFS_BANDWIDTH：改变调度结构体布局，vendor 模块按偏移内嵌引用错乱。
+          #   - cgroup 可选/遗留簇(PERF/HUGETLB/NET_CLS/NETCLASSID)：同类结构体扰动。
+          # 容器网络请用 --network=host；cpu 限制请用 --cpu-shares / cpu.weight 相对权重代替 --cpus。
+          # fix_cgroup.patch 会改写 cgroup 源码的挂载/链接行为（Droidspaces/LXC 专用），
+          # 与安卓用户态默认 cgroup v1 假设冲突，曾导致 init 早期分组失败卡第一屏。
+          # 因此仅在启用 Droidspaces 时才套这个源码补丁；纯 Docker 走 docker.config 的
+          # cgroup 控制器 =y 即可，由 docker/runc 自行处理 cgroup v2 unified 层级。
+          if [[ "${{ inputs.droidspaces }}" != "none" ]]; then
+            echo ">>> Droidspaces 已启用，应用 fix_cgroup.patch..."
+            patch -p1 -F 3 < ../patch/fix_cgroup.patch || true
+          else
+            echo ">>> Droidspaces 未启用，跳过 fix_cgroup.patch（隔离 cgroup 源码改动）"
+          fi
+
+      - name: Apply Virtual Machine (KVM) support
+        if: inputs.vm
+        run: |
+          cd sm8650
+
+          echo ">>> 正在启用虚拟机 (KVM) 支持..."
+          cat ../patch/vm.config >> arch/arm64/configs/gki_defconfig
 
       - name: Fix extract-cert key_pass compatibility
         if: inputs.rom_source != 'YAAP-16'
@@ -444,6 +514,14 @@ jobs:
             ZIP_PREFIX="${ZIP_PREFIX}-dss-ext"
           fi
 
+          # 添加 Docker / VM 标记
+          if [[ "${{ inputs.docker }}" == "true" ]]; then
+            ZIP_PREFIX="${ZIP_PREFIX}-docker"
+          fi
+          if [[ "${{ inputs.vm }}" == "true" ]]; then
+            ZIP_PREFIX="${ZIP_PREFIX}-vm"
+          fi
+
           ZIP_NAME="${{ inputs.rom_source }}-${ZIP_PREFIX}-$(date -u +"%m%d")"
           git clone --depth=1 https://github.com/AkiHaza/AnyKernel3.git
           cp sm8650/out/arch/arm64/boot/Image AnyKernel3/Image
@@ -532,6 +610,8 @@ jobs:
             | Clang | [${{ env.CLANG_VERSION }}](${{ env.CLANG_URL }}) |
             | KernelSU | ${{ env.KSU_TYPENAME }} |
             | Droidspaces | ${{ inputs.droidspaces }} |
+            | Docker | ${{ inputs.docker }} |
+            | VM (KVM) | ${{ inputs.vm }} |
             | Built at | ${{ env.TIME_FORM }} |
 
             **Manager downloads:**

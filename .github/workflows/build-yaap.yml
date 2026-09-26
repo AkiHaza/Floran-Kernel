@@ -37,6 +37,18 @@ on:
         type: boolean
         default: true
 
+      docker:
+        description: "Docker Container Support"
+        required: true
+        type: boolean
+        default: false
+
+      vm:
+        description: "Virtual Machine (KVM) Support"
+        required: true
+        type: boolean
+        default: false
+
       kernel_name:
         description: "Custom Kernel Name"
         required: false
@@ -64,6 +76,8 @@ jobs:
       netfilter: ${{ inputs.netfilter }}
       ccm: ${{ inputs.ccm }}
       droidspaces: none
+      docker: ${{ inputs.docker }}
+      vm: ${{ inputs.vm }}
       kernel_name: ${{ inputs.kernel_name }}
       create_release: ${{ inputs.create_release }}
     secrets: inherit

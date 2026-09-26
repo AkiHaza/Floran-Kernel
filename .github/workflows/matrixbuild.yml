@@ -16,6 +16,16 @@ on:
           - "none"
           - "standard"
           - "extended"
+      docker:
+        description: "Docker Container Support"
+        required: true
+        type: boolean
+        default: false
+      vm:
+        description: "Virtual Machine (KVM) Support"
+        required: true
+        type: boolean
+        default: false
       release_version:
         description: "Release version (leave empty to use date)"
         required: false
@@ -84,8 +94,15 @@ jobs:
         if: inputs.lz4_enable && matrix.rom_source != 'YAAP-17'
         run: |
           cd sm8650
-          cp ../patch/lz4opt.S lib/
-          git apply -p1 < ../patch/lz4.patch || true
+          # lz4.patch 基于含 fs/f2fs/lz4armv8/ 的源码树重构；部分 ROM 不兼容。
+          # 先 --check，不兼容时干净跳过（保留 GKI 原生 LZ4）。
+          if git apply --check -p1 < ../patch/lz4.patch 2>/dev/null; then
+            cp ../patch/lz4opt.S lib/
+            git apply -p1 < ../patch/lz4.patch
+            echo "LZ4 1.10.0 patch applied."
+          else
+            echo "LZ4 patch not compatible with ${{ matrix.rom_source }} source; skipping (stock GKI LZ4 retained)."
+          fi
 
       - name: Apply Droidspaces patches
         if: inputs.droidspaces != 'none' && matrix.rom_source != 'YAAP-17'
@@ -122,6 +139,29 @@ jobs:
           echo "CONFIG_DRM_LINDROID_EVDI=y" >> arch/arm64/configs/gki_defconfig
           
           patch -p1 -F 3 < ../patch/evdi_drm.patch || true
+
+      - name: Apply Docker support
+        if: inputs.docker
+        run: |
+          cd sm8650
+
+          echo ">>> 正在启用 Docker 容器支持..."
+          cat ../patch/docker.config >> arch/arm64/configs/gki_defconfig
+          # fix_cgroup.patch 与安卓 cgroup v1 假设冲突，仅在启用 Droidspaces 时才套（隔离 bootloop）
+          if [[ "${{ inputs.droidspaces }}" != "none" ]]; then
+            echo ">>> Droidspaces 已启用，应用 fix_cgroup.patch..."
+            patch -p1 -F 3 < ../patch/fix_cgroup.patch || true
+          else
+            echo ">>> Droidspaces 未启用，跳过 fix_cgroup.patch（隔离 cgroup 源码改动）"
+          fi
+
+      - name: Apply Virtual Machine (KVM) support
+        if: inputs.vm
+        run: |
+          cd sm8650
+
+          echo ">>> 正在启用虚拟机 (KVM) 支持..."
+          cat ../patch/vm.config >> arch/arm64/configs/gki_defconfig
 
       - name: Fix extract-cert key_pass compatibility
         if: matrix.rom_source != 'YAAP-16'
@@ -371,6 +411,13 @@ jobs:
             ZIP_PREFIX="${ZIP_PREFIX}-dss"
           elif [[ "${{ inputs.droidspaces }}" == "extended" ]]; then
             ZIP_PREFIX="${ZIP_PREFIX}-dss-ext"
+          fi
+          
+          if [[ "${{ inputs.docker }}" == "true" ]]; then
+            ZIP_PREFIX="${ZIP_PREFIX}-docker"
+          fi
+          if [[ "${{ inputs.vm }}" == "true" ]]; then
+            ZIP_PREFIX="${ZIP_PREFIX}-vm"
           fi
           
           ZIP_NAME="${{ matrix.rom_source }}-${ZIP_PREFIX}-Floran-$(date -u +"%m%d")"

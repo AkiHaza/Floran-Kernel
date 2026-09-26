@@ -28,6 +28,8 @@
   - IPSet 与 IPv6 NAT
   - Droidspaces 容器支持
   - Droidspaces Extended：额外启用虚拟 HCI、systemd-coredump 相关配置及 Lindroid EVDI DRM
+  - Docker 容器支持（补齐 cgroup v2 控制器、bridge/nftables/IPVS、overlay/btrfs 等配置）
+  - 虚拟机 KVM 支持（arm64 KVM 宿主、vhost、virtio、9p，视平台 pKVM 限制可选）
 - 使用 AOSP Clang 编译：YAAP-17 使用 `clang-r596125`，其他源码使用 `clang-r563880c`
 - 通过 AnyKernel3 输出可刷写 ZIP
 - 支持上传 Actions Artifact，并可自动创建 GitHub Release
@@ -56,6 +58,8 @@
 | `Enable IPSET & IPv6_NAT` | 启用 IPSet、IPv6 NAT 及相关 Netfilter 配置。 |
 | `Enable BBR & ECN` | 启用 BBR、ECN 与 FQ。 |
 | `Droidspaces Container Support` | 选择 `none`、`standard` 或 `extended` 容器支持。YAAP-16/YAAP-17 源码不会应用 Droidspaces 补丁。 |
+| `Enable Docker Container Support` | 追加 `patch/docker.config`，补齐运行 Docker 所需但 `check-config.sh` 报告缺失的内核配置，并应用 `patch/fix_cgroup.patch` 恢复 cgroup v2 无前缀文件兼容。 |
+| `Enable Virtual Machine (KVM) Support` | 追加 `patch/vm.config`，启用 arm64 KVM 宿主、vhost、virtio 与 9p 支持。高通 pineapple 平台可能启用 pKVM，若开启后无法启动请关闭该选项。 |
 | `Custom Kernel Name` | 设置内核附加版本名。脚本会自动补上 `-` 前缀。 |
 | `创建 GitHub Release？` | 是否在构建成功后创建并上传 GitHub Release。 |
 
@@ -111,6 +115,20 @@ YAAP-17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://githu
 
 > [!NOTE]
 > Droidspaces 补丁仅会应用于非 YAAP-16/YAAP-17 源码。
+
+## Docker 与虚拟机支持
+
+在 **Build LineageOS Kernel**（含 `Crdroid`）工作流中勾选 `Enable Docker Container Support` 即可让内核满足 Docker 的运行要求。构建时会把 [`patch/docker.config`](patch/docker.config) 追加到 `arch/arm64/configs/gki_defconfig`，覆盖 `moby/check-config.sh` 报告的缺失项：
+
+- **cgroup v2 控制器**：`CGROUP_DEVICE` / `CGROUP_PIDS` / `CGROUP_PERF` / `CGROUP_HUGETLB` / `CFS_BANDWIDTH` / `NET_CLS_CGROUP` 等，使 cpu / cpuset / io / pids 控制器可用。
+- **网络**：`BRIDGE_NETFILTER`、`BRIDGE_VLAN_FILTERING`、`VETH`、`VXLAN`、`MACVLAN`、`IPVLAN`，以及 nftables（`NF_TABLES` / `NFT_*`）、IPVS、`IP_SCTP`。
+- **存储驱动**：`OVERLAY_FS`（默认）、`BTRFS_FS`。
+- **cgroup 兼容补丁**：应用 `patch/fix_cgroup.patch`，恢复 cgroup v2 无前缀文件链接，供 Docker / LXC 使用。
+
+勾选 `Enable Virtual Machine (KVM) Support` 会追加 [`patch/vm.config`](patch/vm.config)，启用 arm64 **KVM 宿主**、`TUN`/`VHOST`、`VIRTIO` 与 `9P` 支持，用于运行虚拟机。
+
+> [!WARNING]
+> pineapple / sm8650 平台可能默认启用 pKVM（protected KVM），此时 KVM 宿主接口受限。KVM 为独立可选开关，若开启后设备无法启动，请在构建时关闭 `vm` 选项。Docker 与 KVM 均只修改内核配置，与是否集成 KernelSU 无关。
 
 ## 输出文件命名
 
