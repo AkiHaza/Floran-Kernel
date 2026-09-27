@@ -31,7 +31,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        rom_source: [YAAP-17, Crdroid, LineageOS]
+        rom_source: [Crdroid, LineageOS]
         ksu_type: [KernelSU-backslashxx-susfs, KernelSU-Next-susfs, ReSukiSU-susfs]
       fail-fast: false
 
@@ -50,24 +50,19 @@ jobs:
           
       - name: Clone Kernel Source and Download Clang Toolchain
         run: |
-          if [[ "${{ matrix.rom_source }}" == "YAAP-17" ]]; then
-            git clone --depth=1 -b dev https://github.com/AkiHaza/android_kernel_oneplus_sm8650.git sm8650
-            git clone --depth=1 -b seventeen https://github.com/AkiHaza/android_kernel_oneplus_sm8650-modules.git sm8650-modules
-          elif [[ "${{ matrix.rom_source }}" == "LineageOS" ]]; then
+          if [[ "${{ matrix.rom_source }}" == "LineageOS" ]]; then
             git clone --depth=1 -b lineage-23.2 https://github.com/LineageOS/android_kernel_oneplus_sm8650.git sm8650
             git clone --depth=1 -b lineage-23.2 https://github.com/LineageOS/android_kernel_oneplus_sm8650-modules.git sm8650-modules
           elif [[ "${{ matrix.rom_source }}" == "Crdroid" ]]; then
             git clone --depth=1 -b 16.0 https://github.com/crdroidandroid/android_kernel_oneplus_sm8650.git sm8650
             git clone --depth=1 -b 16.0 https://github.com/crdroidandroid/android_kernel_oneplus_sm8650-modules.git sm8650-modules
+          else
+            echo "Unsupported ROM source: ${{ matrix.rom_source }}" >&2
+            exit 1
           fi
 
-          if [[ "${{ matrix.rom_source }}" == "YAAP-17" ]]; then
-            CLANG_VERSION="clang-r596125"
-            CLANG_URL="https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r596125/linux-x86-refs_heads_android17-release-clang-r596125.tar.gz"
-          else
-            CLANG_VERSION="clang-r563880c"
-            CLANG_URL="https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r563880c/linux-x86-refs_heads_android16-qpr2-release-clang-r563880c.tar.gz"
-          fi
+          CLANG_VERSION="clang-r563880c"
+          CLANG_URL="https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r563880c/linux-x86-refs_heads_android16-qpr2-release-clang-r563880c.tar.gz"
 
           mkdir -p "toolchains/${CLANG_VERSION}"
           cd toolchains
@@ -81,14 +76,14 @@ jobs:
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Apply lz4 patch
-        if: inputs.lz4_enable && matrix.rom_source != 'YAAP-17'
+        if: inputs.lz4_enable
         run: |
           cd sm8650
           cp ../patch/lz4opt.S lib/
-          git apply -p1 < ../patch/lz4.patch || true
+          git apply -p1 < ../patch/lz4.patch
 
       - name: Apply Droidspaces patches
-        if: inputs.droidspaces != 'none' && matrix.rom_source != 'YAAP-17'
+        if: inputs.droidspaces != 'none'
         run: |
           cd sm8650
           
@@ -107,12 +102,12 @@ jobs:
           echo "CONFIG_NTSYNC=y" >> ./arch/arm64/configs/gki_defconfig
           
           echo ">>> 应用 Droidspaces 补丁..."
-          patch -p1 -F 3 < ../patch/fix_sysvipc_kabi_6_7_8.patch || true
-          patch -p1 -F 3 < ../patch/ntsync_base.patch || true
-          patch -p1 -F 3 < ../patch/ntsync_compat_android14-6.1.patch || true
+          patch --batch --forward -p1 -F 3 < ../patch/fix_sysvipc_kabi_6_7_8.patch
+          patch --batch --forward -p1 -F 3 < ../patch/ntsync_base.patch
+          patch --batch --forward -p1 -F 3 < ../patch/ntsync_compat_android14-6.1.patch
 
       - name: Apply Droidspaces Extended patches
-        if: inputs.droidspaces == 'extended' && matrix.rom_source != 'YAAP-17'
+        if: inputs.droidspaces == 'extended'
         run: |
           cd sm8650
           
@@ -121,10 +116,9 @@ jobs:
           echo "CONFIG_STATIC_USERMODEHELPER=n" >> arch/arm64/configs/gki_defconfig
           echo "CONFIG_DRM_LINDROID_EVDI=y" >> arch/arm64/configs/gki_defconfig
           
-          patch -p1 -F 3 < ../patch/evdi_drm.patch || true
+          patch --batch --forward -p1 -F 3 < ../patch/evdi_drm.patch
 
       - name: Fix extract-cert key_pass compatibility
-        if: matrix.rom_source != 'YAAP-16'
         run: |
           cd sm8650
           python3 - <<'PY'
@@ -159,11 +153,7 @@ jobs:
 
       - name: Compile Kernel
         run: |
-          if [[ "${{ matrix.rom_source }}" == "YAAP-17" ]]; then
-            CLANG_VERSION="clang-r596125"
-          else
-            CLANG_VERSION="clang-r563880c"
-          fi
+          CLANG_VERSION="clang-r563880c"
           CLANG_ROOT="${GITHUB_WORKSPACE}/toolchains/${CLANG_VERSION}/bin"
           export PATH="${CLANG_ROOT}:$PATH"
           export ARCH=arm64
@@ -309,9 +299,7 @@ jobs:
           sed -i "s|CONFIG_MODULE_SIG_PROTECT=y|CONFIG_MODULE_SIG_PROTECT=n|" arch/arm64/configs/gki_defconfig
           echo "CONFIG_TMPFS_XATTR=y" >> arch/arm64/configs/gki_defconfig
 
-          if [[ "${{ matrix.rom_source }}" != "YAAP-17" ]]; then
-            echo "CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE=y" >> arch/arm64/configs/gki_defconfig
-          fi
+          echo "CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE=y" >> arch/arm64/configs/gki_defconfig
 
           echo "CONFIG_TCP_CONG_ADVANCED=y" >> arch/arm64/configs/gki_defconfig
           echo "CONFIG_TCP_CONG_BBR=y" >> arch/arm64/configs/gki_defconfig
@@ -401,15 +389,17 @@ jobs:
           merge-multiple: true
 
       - name: Set release env
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
         run: |
           TIME_FORM="$(date -u +'%Y-%m-%d %H:%M:%S') UTC"
-          echo "TIME_FORM=$TIME_FORM" >> $GITHUB_ENV
-          if [[ -n "${{ inputs.release_version }}" ]]; then
-            REL_TAG="FloranKernel-${{ inputs.release_version }}"
+          echo "TIME_FORM=$TIME_FORM" >> "$GITHUB_ENV"
+          if [[ -n "$RELEASE_VERSION" ]]; then
+            REL_TAG="FloranKernel-${RELEASE_VERSION}"
           else
             REL_TAG="FloranKernel-$(date -u +'%y%m%d')"
           fi
-          echo "REL_TAG=$REL_TAG" >> $GITHUB_ENV
+          echo "REL_TAG=$REL_TAG" >> "$GITHUB_ENV"
           echo "REL_TITLE=Floran Kernel Build Release" >> "$GITHUB_ENV"
 
       - name: Create GitHub Release
@@ -421,8 +411,8 @@ jobs:
             
             | Field | Value |
             |---|---|
-            |    ROM 支持   | YAAP-17, Crdroid, LineageOS |
-            | Clang | [YAAP-17 clang-r596125](https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r596125/linux-x86-refs_heads_android17-release-clang-r596125.tar.gz); Crdroid/LineageOS [clang-r563880c](https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r563880c/linux-x86-refs_heads_android16-qpr2-release-clang-r563880c.tar.gz) |
+            |    ROM 支持   | Crdroid, LineageOS |
+            | Clang | [clang-r563880c](https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r563880c/linux-x86-refs_heads_android16-qpr2-release-clang-r563880c.tar.gz) |
             | KernelSU 方案 |      KernelSU (backslashxx), KernelSU-Next, ReSukiSU       |
             |   Build时间   |       ${{ env.TIME_FORM }}        |
 

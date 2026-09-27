@@ -63,7 +63,7 @@
 
 单独构建工作流使用以下上游与分支：
 
-矩阵构建工作流固定使用 `YAAP-17`，不再构建 `YAAP-16`。
+矩阵构建工作流仅构建 `crDroid` 与 `LineageOS`，不包含 YAAP。
 
 YAAP-17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r596125/linux-x86-refs_heads_android17-release-clang-r596125.tar.gz)
 
