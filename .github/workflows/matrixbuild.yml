@@ -32,7 +32,7 @@ jobs:
     strategy:
       matrix:
         rom_source: [Crdroid, LineageOS]
-        ksu_type: [KernelSU-backslashxx-susfs, KernelSU-Next-susfs, ReSukiSU-susfs]
+        ksu_type: [KernelSU-Next-susfs, ReSukiSU-susfs]
       fail-fast: false
 
     steps:
@@ -79,8 +79,13 @@ jobs:
         if: inputs.lz4_enable
         run: |
           cd sm8650
-          cp ../patch/lz4opt.S lib/
-          git apply -p1 < ../patch/lz4.patch
+          if git apply --check -p1 < ../patch/lz4.patch 2>/dev/null; then
+            cp ../patch/lz4opt.S lib/
+            git apply -p1 < ../patch/lz4.patch
+            echo "LZ4 1.10.0 patch applied."
+          else
+            echo "LZ4 patch not compatible with ${{ matrix.rom_source }} source; skipping (stock GKI LZ4 retained)."
+          fi
 
       - name: Apply Droidspaces patches
         if: inputs.droidspaces != 'none'
@@ -165,9 +170,7 @@ jobs:
 
           cd sm8650
 
-          if [[ "${{ matrix.ksu_type }}" == KernelSU-backslashxx-susfs ]]; then
-            curl -fLSs "https://raw.githubusercontent.com/backslashxx/KernelSU/master/kernel/setup.sh" | bash -s master
-          elif [[ "${{ matrix.ksu_type }}" == KernelSU-Next-susfs ]]; then
+          if [[ "${{ matrix.ksu_type }}" == KernelSU-Next-susfs ]]; then
             curl -fLSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
           elif [[ "${{ matrix.ksu_type }}" == ReSukiSU-susfs ]]; then
             curl -fLSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash -s main
@@ -347,9 +350,7 @@ jobs:
 
       - name: Make AnyKernel3
         run: |
-          if [[ "${{ matrix.ksu_type }}" == "KernelSU-backslashxx-susfs" ]]; then
-            ZIP_PREFIX="KernelSU-backslashxx-SUSFS"
-          elif [[ "${{ matrix.ksu_type }}" == "KernelSU-Next-susfs" ]]; then
+          if [[ "${{ matrix.ksu_type }}" == "KernelSU-Next-susfs" ]]; then
             ZIP_PREFIX="KernelSU-Next-SUSFS"
           elif [[ "${{ matrix.ksu_type }}" == "ReSukiSU-susfs" ]]; then
             ZIP_PREFIX="ReSukiSU-SUSFS"
@@ -374,6 +375,7 @@ jobs:
           path: "*.zip"
 
   release:
+    if: ${{ always() && needs.build.result != 'cancelled' }}
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -387,6 +389,16 @@ jobs:
           pattern: Kernel_ZIP_*
           path: ./release_zips
           merge-multiple: true
+
+      - name: Verify release artifacts
+        run: |
+          shopt -s nullglob
+          zip_files=(release_zips/*.zip)
+          if (( ${#zip_files[@]} == 0 )); then
+            echo "No kernel ZIP artifacts were produced; refusing to create an empty release."
+            exit 1
+          fi
+          printf 'Release artifact: %s\n' "${zip_files[@]}"
 
       - name: Set release env
         env:
@@ -413,13 +425,14 @@ jobs:
             |---|---|
             |    ROM 支持   | Crdroid, LineageOS |
             | Clang | [clang-r563880c](https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r563880c/linux-x86-refs_heads_android16-qpr2-release-clang-r563880c.tar.gz) |
-            | KernelSU 方案 |      KernelSU (backslashxx), KernelSU-Next, ReSukiSU       |
+            | KernelSU 方案 |      KernelSU-Next, ReSukiSU       |
             |   Build时间   |       ${{ env.TIME_FORM }}        |
 
             **Manager downloads:**
             - KernelSU-Next: [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)
-            - KernelSU (backslashxx): [backslashxx/KernelSU](https://github.com/backslashxx/KernelSU)
             - ReSukiSU: [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU)
           draft: false
           prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_unmatched_files: true
           files: release_zips/*.zip

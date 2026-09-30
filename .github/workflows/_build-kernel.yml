@@ -209,10 +209,7 @@ jobs:
 
           cd sm8650
 
-          if [[ "${{ inputs.ksu_type }}" == "KernelSU-backslashxx-susfs" ]]; then
-            curl -fLSs "https://raw.githubusercontent.com/backslashxx/KernelSU/master/kernel/setup.sh" | bash -s master
-
-          elif [[ "${{ inputs.ksu_type }}" == KernelSU-Official* ]]; then
+          if [[ "${{ inputs.ksu_type }}" == KernelSU-Official* ]]; then
             curl -fLSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
 
           elif [[ "${{ inputs.ksu_type }}" == KernelSU-Next-susfs ]]; then
@@ -423,8 +420,6 @@ jobs:
             ZIP_PREFIX="KernelSU-Official"
           elif [[ "${{ inputs.ksu_type }}" == "KernelSU-Official-susfs" ]]; then
             ZIP_PREFIX="KernelSU-Official-SUSFS"
-          elif [[ "${{ inputs.ksu_type }}" == "KernelSU-backslashxx-susfs" ]]; then
-            ZIP_PREFIX="KernelSU-backslashxx-SUSFS"
           elif [[ "${{ inputs.ksu_type }}" == "KernelSU-Next-susfs" ]]; then
             ZIP_PREFIX="KernelSU-Next-SUSFS"
           elif [[ "${{ inputs.ksu_type }}" == "KernelSU-Next" ]]; then
@@ -492,8 +487,6 @@ jobs:
             KSU_TYPENAME="KernelSU (Official)"
           elif [[ "${{ inputs.ksu_type }}" == "KernelSU-Official-susfs" ]]; then
             KSU_TYPENAME="KernelSU Official + SUSFS"
-          elif [[ "${{ inputs.ksu_type }}" == "KernelSU-backslashxx-susfs" ]]; then
-            KSU_TYPENAME="KernelSU (backslashxx) + SUSFS"
           elif [[ "${{ inputs.ksu_type }}" == "KernelSU-Next-susfs" ]]; then
             KSU_TYPENAME="KernelSU-Next + SUSFS"
           elif [[ "${{ inputs.ksu_type }}" == "KernelSU-Next" ]]; then
@@ -536,7 +529,6 @@ jobs:
 
             **Manager downloads:**
             - KernelSU (Official): [tiann/KernelSU](https://github.com/tiann/KernelSU)
-            - KernelSU (backslashxx): [backslashxx/KernelSU](https://github.com/backslashxx/KernelSU)
             - KernelSU-Next: [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)
             - ReSukiSU: [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU)
           draft: false

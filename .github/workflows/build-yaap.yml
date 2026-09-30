@@ -20,7 +20,6 @@ on:
           - ReSukiSU
           - KernelSU-Next
           - KernelSU-Official-susfs
-          - KernelSU-backslashxx-susfs
           - KernelSU-Next-susfs
           - ReSukiSU-susfs
           - None
