@@ -194,32 +194,39 @@ jobs:
           cd sm8650
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path("certs/extract-cert.c")
           text = path.read_text()
-          guarded_decl = """#ifdef USE_PKCS11_ENGINE
-          static const char *key_pass;
-          #endif"""
-          guarded_assignment = """#ifdef USE_PKCS11_ENGINE
-          \tkey_pass = getenv("KBUILD_SIGN_PIN");
-          #endif"""
-          declaration = "static const char *key_pass;"
-          assignment = '\tkey_pass = getenv("KBUILD_SIGN_PIN");'
+          guard = r"(?:#ifdef\s+USE_PKCS11_ENGINE|#if\s+defined\s*\(\s*USE_PKCS11_ENGINE\s*\))"
+          declaration = re.compile(
+              rf"(?m)^(?P<indent>[ \t]*){guard}[ \t]*\r?\n"
+              r"(?P<body>[ \t]*)static\s+const\s+char\s+\*\s*key_pass\s*;[ \t]*\r?\n"
+              r"(?P=indent)#endif[ \t]*(?:\r?\n|$)"
+          )
+          assignment = re.compile(
+              rf"(?m)^(?P<indent>[ \t]*){guard}[ \t]*\r?\n"
+              r"(?P<body>[ \t]*)key_pass\s*=\s*getenv\s*\(\s*"
+              r"\"KBUILD_SIGN_PIN\"\s*\)\s*;[ \t]*\r?\n"
+              r"(?P=indent)#endif[ \t]*(?:\r?\n|$)"
+          )
 
-          has_guarded_decl = guarded_decl in text
-          has_guarded_assignment = guarded_assignment in text
-          if has_guarded_decl and has_guarded_assignment:
-              text = text.replace(guarded_decl, declaration, 1)
-              text = text.replace(guarded_assignment, assignment, 1)
+          text, declaration_count = declaration.subn(
+              lambda match: f"{match.group('body')}static const char *key_pass;\n",
+              text,
+              count=1,
+          )
+          text, assignment_count = assignment.subn(
+              lambda match: f'{match.group("body")}key_pass = getenv("KBUILD_SIGN_PIN");\n',
+              text,
+              count=1,
+          )
+
+          if declaration_count or assignment_count:
               path.write_text(text)
               print("Fixed extract-cert.c key_pass guards")
-          elif not has_guarded_decl and not has_guarded_assignment \
-                  and declaration in text and assignment in text:
-              print("extract-cert.c key_pass layout is already compatible")
           else:
-              raise SystemExit(
-                  "Unsupported extract-cert.c layout: refusing key_pass fix"
-              )
+              print("extract-cert.c key_pass layout is already compatible")
           PY
 
       - name: Compile Kernel

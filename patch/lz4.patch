@@ -5222,7 +5222,7 @@ diff --git a/lib/lz4/lz4hc.c b/lib/lz4/lz4hc.c
 new file mode 100644
 --- /dev/null	(revision b2497e4243461a835c25469028cd355bfc2e993f)
 +++ b/lib/lz4/lz4hc.c	(revision b2497e4243461a835c25469028cd355bfc2e993f)
-@@ -0,0 +1,2805 @@
+@@ -0,0 +1,2807 @@
 +/*
 +    LZ4 HC - High Compression Mode of LZ4
 +    Copyright (C) 2011-2020, Yann Collet.
@@ -5300,6 +5300,8 @@ new file mode 100644
 +#define LZ4_OPT_NUM (1 << 12)
 +
 +/*===   Macros   ===*/
++#undef MIN
++#undef MAX
 +#define MIN(a, b) ((a) < (b) ? (a) : (b))
 +#define MAX(a, b) ((a) > (b) ? (a) : (b))
 +
