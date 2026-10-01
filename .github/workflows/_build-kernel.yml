@@ -75,7 +75,7 @@ jobs:
             git clone --depth=1 -b seventeen https://github.com/AkiHaza/android_kernel_oneplus_sm8650-modules.git sm8650-modules
 
           elif [[ "${{ inputs.rom_source }}" == "DerpFest" ]]; then
-            git clone --depth=1 -b lineage23.2 https://github.com/ppanzenboeck/android_kernel_oneplus_sm8650.git sm8650
+            git clone --depth=1 -b lineage-23.2 https://github.com/ppanzenboeck/android_kernel_oneplus_sm8650.git sm8650
             git clone --depth=1 -b derp16.2-arb https://github.com/ppanzenboeck/android_kernel_oneplus_sm8650-modules.git sm8650-modules
 
           elif [[ "${{ inputs.rom_source }}" == "LineageOS" ]]; then
