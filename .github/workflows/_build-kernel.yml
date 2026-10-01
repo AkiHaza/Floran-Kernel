@@ -112,14 +112,21 @@ jobs:
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Apply lz4 patch
-        if: inputs.lz4_enable && inputs.rom_source != 'YAAP-16' && inputs.rom_source != 'YAAP-17' && inputs.rom_source != 'DerpFest'
+        if: inputs.lz4_enable && inputs.rom_source != 'YAAP-16' && inputs.rom_source != 'YAAP-17'
         run: |
           cd sm8650
-          cp ../patch/lz4opt.S lib/
-          git apply -p1 < ../patch/lz4.patch || true
+          if [[ "${{ inputs.rom_source }}" == "DerpFest" ]]; then
+            git apply --check -p1 < ../patch/lz4.patch
+            cp ../patch/lz4opt.S lib/
+            git apply -p1 < ../patch/lz4.patch
+            echo "LZ4 1.10.0 patch applied to DerpFest."
+          else
+            cp ../patch/lz4opt.S lib/
+            git apply -p1 < ../patch/lz4.patch || true
+          fi
 
       - name: Apply Droidspaces patches
-        if: inputs.droidspaces != 'none' && inputs.rom_source != 'YAAP-16' && inputs.rom_source != 'YAAP-17' && inputs.rom_source != 'DerpFest'
+        if: inputs.droidspaces != 'none' && inputs.rom_source != 'YAAP-16' && inputs.rom_source != 'YAAP-17'
         run: |
           cd sm8650
 
@@ -140,13 +147,19 @@ jobs:
 
           # 应用 Droidspaces 容器必须补丁
           echo ">>> 应用 Droidspaces 补丁..."
-          patch -p1 -F 3 < ../patch/fix_sysvipc_kabi_6_7_8.patch || true
-          # 应用 NTSync 补丁
-          patch -p1 -F 3 < ../patch/ntsync_base.patch || true
-          patch -p1 -F 3 < ../patch/ntsync_compat_android14-6.1.patch || true
+          if [[ "${{ inputs.rom_source }}" == "DerpFest" ]]; then
+            patch -p1 -F 3 < ../patch/fix_sysvipc_kabi_6_7_8.patch
+            patch -p1 -F 3 < ../patch/ntsync_base.patch
+            patch -p1 -F 3 < ../patch/ntsync_compat_android14-6.1.patch
+            echo "Droidspaces patches applied to DerpFest."
+          else
+            patch -p1 -F 3 < ../patch/fix_sysvipc_kabi_6_7_8.patch || true
+            patch -p1 -F 3 < ../patch/ntsync_base.patch || true
+            patch -p1 -F 3 < ../patch/ntsync_compat_android14-6.1.patch || true
+          fi
 
       - name: Apply Droidspaces Extended patches
-        if: inputs.droidspaces == 'extended' && inputs.rom_source != 'YAAP-16' && inputs.rom_source != 'YAAP-17' && inputs.rom_source != 'DerpFest'
+        if: inputs.droidspaces == 'extended' && inputs.rom_source != 'YAAP-16' && inputs.rom_source != 'YAAP-17'
         run: |
           cd sm8650
 
@@ -159,7 +172,12 @@ jobs:
           echo "CONFIG_DRM_LINDROID_EVDI=y" >> arch/arm64/configs/gki_defconfig
 
           # 应用 EVDI DRM 补丁
-          patch -p1 -F 3 < ../patch/evdi_drm.patch || true
+          if [[ "${{ inputs.rom_source }}" == "DerpFest" ]]; then
+            patch -p1 -F 3 < ../patch/evdi_drm.patch
+            echo "Droidspaces Extended patch applied to DerpFest."
+          else
+            patch -p1 -F 3 < ../patch/evdi_drm.patch || true
+          fi
 
       - name: Fix extract-cert key_pass compatibility
         if: inputs.rom_source != 'YAAP-16'

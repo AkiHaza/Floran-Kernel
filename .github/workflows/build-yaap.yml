@@ -1,15 +1,15 @@
-name: Build YAAP Kernel
+name: Build Android17 Kernel
 
 on:
   workflow_dispatch:
     inputs:
-      yaap_version:
-        description: "YAAP Version"
+      rom_source:
+        description: "Android 17 Kernel Source Code"
         required: true
         type: choice
         options:
           - YAAP-17
-          - YAAP-16
+          - DerpFest
 
       ksu_type:
         description: "KernelSU Version"
@@ -23,6 +23,21 @@ on:
           - KernelSU-Next-susfs
           - ReSukiSU-susfs
           - None
+
+      lz4_enable:
+        description: "Enable lz4 1.10.0 patch (DerpFest only)"
+        required: true
+        type: boolean
+        default: true
+
+      droidspaces:
+        description: "Droidspaces Container Support (DerpFest only)"
+        required: true
+        type: choice
+        options:
+          - "none"
+          - "standard"
+          - "extended"
 
       netfilter:
         description: "Enable IPSET & IPv6_NAT"
@@ -57,12 +72,12 @@ jobs:
   build:
     uses: ./.github/workflows/_build-kernel.yml
     with:
-      rom_source: ${{ inputs.yaap_version }}
+      rom_source: ${{ inputs.rom_source }}
       ksu_type: ${{ inputs.ksu_type }}
-      lz4_enable: false
+      lz4_enable: ${{ inputs.rom_source == 'DerpFest' && inputs.lz4_enable }}
       netfilter: ${{ inputs.netfilter }}
       ccm: ${{ inputs.ccm }}
-      droidspaces: none
+      droidspaces: ${{ inputs.rom_source == 'DerpFest' && inputs.droidspaces || 'none' }}
       kernel_name: ${{ inputs.kernel_name }}
       create_release: ${{ inputs.create_release }}
     secrets: inherit

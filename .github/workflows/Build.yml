@@ -1,4 +1,4 @@
-name: Build LineageOS Kernel
+name: Build Android16 Kernel
 
 on:
   workflow_dispatch:
@@ -8,10 +8,10 @@ on:
         required: true
         type: choice
         options:
+          - YAAP-16
           - LineageOS
           - Crdroid
           - PixelOS
-          - DerpFest
 
       ksu_type:
         description: "KernelSU Version"
