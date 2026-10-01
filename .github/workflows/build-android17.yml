@@ -25,13 +25,13 @@ on:
           - None
 
       lz4_enable:
-        description: "Enable lz4 1.10.0 patch (DerpFest only)"
+        description: "Enable lz4 1.10.0 patch"
         required: true
         type: boolean
         default: true
 
       droidspaces:
-        description: "Droidspaces Container Support (DerpFest only)"
+        description: "Droidspaces Container Support"
         required: true
         type: choice
         options:

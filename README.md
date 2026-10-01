@@ -23,7 +23,7 @@
   - 上述方案的 SUSFS 变体（部分组合）
   - 不集成 KernelSU
 - 可选功能：
-  - LZ4 1.10.0 补丁（YAAP-16/YAAP-17 不应用，DerpFest 可选）
+  - LZ4 1.10.0 补丁（YAAP-16/YAAP-17 不应用；LineageOS 与 DerpFest 使用 Android 6.1 兼容适配）
   - BBR、ECN 与 FQ 队列调度
   - IPSet 与 IPv6 NAT
   - Droidspaces 容器支持
@@ -52,7 +52,7 @@
 | `Build Android17 Kernel` | 选择并构建 `YAAP-17` 或 `DerpFest` 内核；Android 17 工作流固定使用 `clang-r596125`，DerpFest 可选启用 LZ4/Droidspaces。 |
 | `ROM Kernel Source Code` | 在对应 Android 版本的工作流中选择内核源码。 |
 | `KernelSU Version` | 选择 KernelSU 集成方案，或选择 `None` 构建非 KernelSU 内核。 |
-| `Enable lz4 1.10.0 patch` | 为非 YAAP-16/YAAP-17 源码应用 LZ4 1.10.0 补丁，Android 17 工作流中可用于 DerpFest。 |
+| `Enable lz4 1.10.0 patch` | 为非 YAAP-16/YAAP-17 源码应用 LZ4 1.10.0 补丁；LineageOS 与 DerpFest 使用 Android 6.1 兼容适配，并在缺少厂商加速目录时回退到通用 C 解码。 |
 | `Enable IPSET & IPv6_NAT` | 启用 IPSet、IPv6 NAT 及相关 Netfilter 配置。 |
 | `Enable BBR & ECN` | 启用 BBR、ECN 与 FQ。 |
 | `Droidspaces Container Support` | 选择 `none`、`standard` 或 `extended` 容器支持。YAAP-16/YAAP-17 不应用 Droidspaces 补丁，DerpFest 可应用。 |
@@ -144,7 +144,7 @@ make O=out gki_defconfig vendor/pineapple_GKI.config vendor/oplus/pineapple_GKI.
 make -j"$(nproc)" O=out Image
 ```
 
-完整的源码拉取、补丁应用、KernelSU/SUSFS 集成与打包步骤，请以 [`.github/workflows/Build.yml`](.github/workflows/Build.yml)（Android 16）和 [`.github/workflows/build-yaap.yml`](.github/workflows/build-yaap.yml)（Android 17）为准；两者共享 [`.github/workflows/_build-kernel.yml`](.github/workflows/_build-kernel.yml) 中的构建逻辑。
+完整的源码拉取、补丁应用、KernelSU/SUSFS 集成与打包步骤，请以 [`.github/workflows/build-android16.yml`](.github/workflows/build-android16.yml)（Android 16）和 [`.github/workflows/build-android17.yml`](.github/workflows/build-android17.yml)（Android 17）为准；两者共享 [`.github/workflows/_build-kernel.yml`](.github/workflows/_build-kernel.yml) 中的构建逻辑。
 
 ## 致谢
 

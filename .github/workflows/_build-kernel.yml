@@ -115,14 +115,23 @@ jobs:
         if: inputs.lz4_enable && inputs.rom_source != 'YAAP-16' && inputs.rom_source != 'YAAP-17'
         run: |
           cd sm8650
-          if [[ "${{ inputs.rom_source }}" == "DerpFest" ]]; then
-            git apply --check -p1 < ../patch/lz4.patch
-            cp ../patch/lz4opt.S lib/
-            git apply -p1 < ../patch/lz4.patch
-            echo "LZ4 1.10.0 patch applied to DerpFest."
+          patch_file=../patch/lz4.patch
+          if [[ "${{ inputs.rom_source }}" == "LineageOS" || "${{ inputs.rom_source }}" == "DerpFest" ]]; then
+            patch_file=../patch/lz4-lineage.patch
+            echo "Using the Android 6.1 compatible LZ4 patch for ${{ inputs.rom_source }}."
+          fi
+
+          if [[ "${{ inputs.rom_source }}" == "LineageOS" || "${{ inputs.rom_source }}" == "DerpFest" ]]; then
+            git apply --check -p1 < "$patch_file"
+            git apply -p1 < "$patch_file"
+            test -f include/linux/lz4.h
+            test -f lib/lz4/lz4.c
+            test -f lib/lz4/lz4armv8/lz4accel.h
+            echo "LZ4 1.10.0 Android 6.1 patch applied to ${{ inputs.rom_source }} (generic C fallback)."
           else
-            cp ../patch/lz4opt.S lib/
-            git apply -p1 < ../patch/lz4.patch || true
+            git apply -p1 < "$patch_file" || true
+            mkdir -p lib/lz4/lz4armv8
+            cp ../patch/lz4opt.S lib/lz4/lz4armv8/lz4armv8.S
           fi
 
       - name: Apply Droidspaces patches
