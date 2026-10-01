@@ -15,6 +15,7 @@
   - LineageOS
   - crDroid
   - PixelOS
+  - DerpFest（Android 17）
 - 支持多种 Root 内核方案：
   - KernelSU Official
   - KernelSU-Next
@@ -22,12 +23,12 @@
   - 上述方案的 SUSFS 变体（部分组合）
   - 不集成 KernelSU
 - 可选功能：
-  - LZ4 1.10.0 补丁（YAAP-16/YAAP-17 源码不应用）
+  - LZ4 1.10.0 补丁（YAAP-16/YAAP-17/DerpFest 源码不应用）
   - BBR、ECN 与 FQ 队列调度
   - IPSet 与 IPv6 NAT
   - Droidspaces 容器支持
   - Droidspaces Extended：额外启用虚拟 HCI、systemd-coredump 相关配置及 Lindroid EVDI DRM
-- 使用 AOSP Clang 编译：YAAP-17 使用 `clang-r596125`，其他源码使用 `clang-r563880c`
+- 使用 AOSP Clang 编译：YAAP-17/DerpFest 使用 Android 17 的 `clang-r596125`，其他源码使用 `clang-r563880c`
 - 通过 AnyKernel3 输出可刷写 ZIP
 - 支持上传 Actions Artifact，并可自动创建 GitHub Release
 
@@ -47,14 +48,14 @@
 
 | 参数 | 说明 |
 |---|---|
-| `Build LineageOS Kernel` | 选择并构建 `LineageOS`、`Crdroid` 或 `PixelOS` 内核；该工作流提供 LZ4、Droidspaces 等通用选项。 |
+| `Build LineageOS Kernel` | 选择并构建 `LineageOS`、`Crdroid`、`PixelOS` 或 `DerpFest` 内核；该工作流提供 LZ4、Droidspaces 等通用选项。 |
 | `Build YAAP Kernel` | 在 `YAAP-16`（`sixteen`）和 `YAAP-17`（kernel `dev` + modules `seventeen`）之间选择；YAAP 工作流固定不应用 LZ4/Droidspaces 补丁。 |
-| `ROM Kernel Source Code` | 在 `Build LineageOS Kernel` 中选择 `LineageOS`、`Crdroid` 或 `PixelOS`。 |
+| `ROM Kernel Source Code` | 在 `Build LineageOS Kernel` 中选择 `LineageOS`、`Crdroid`、`PixelOS` 或 `DerpFest`。 |
 | `KernelSU Version` | 选择 KernelSU 集成方案，或选择 `None` 构建非 KernelSU 内核。 |
-| `Enable lz4 1.10.0 patch` | 为非 YAAP-16/YAAP-17 源码应用 LZ4 1.10.0 补丁。 |
+| `Enable lz4 1.10.0 patch` | 为非 YAAP-16/YAAP-17/DerpFest 源码应用 LZ4 1.10.0 补丁。 |
 | `Enable IPSET & IPv6_NAT` | 启用 IPSet、IPv6 NAT 及相关 Netfilter 配置。 |
 | `Enable BBR & ECN` | 启用 BBR、ECN 与 FQ。 |
-| `Droidspaces Container Support` | 选择 `none`、`standard` 或 `extended` 容器支持。YAAP-16/YAAP-17 源码不会应用 Droidspaces 补丁。 |
+| `Droidspaces Container Support` | 选择 `none`、`standard` 或 `extended` 容器支持。YAAP-16/YAAP-17/DerpFest 源码不会应用 Droidspaces 补丁。 |
 | `Custom Kernel Name` | 设置内核附加版本名。脚本会自动补上 `-` 前缀。 |
 | `创建 GitHub Release？` | 是否在构建成功后创建并上传 GitHub Release。 |
 
@@ -73,6 +74,9 @@ YAAP-17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://githu
 | LineageOS | [`LineageOS/android_kernel_oneplus_sm8650`](https://github.com/LineageOS/android_kernel_oneplus_sm8650) / `lineage-23.2` | [`LineageOS/android_kernel_oneplus_sm8650-modules`](https://github.com/LineageOS/android_kernel_oneplus_sm8650-modules) / `lineage-23.2` |
 | crDroid | [`crdroidandroid/android_kernel_oneplus_sm8650`](https://github.com/crdroidandroid/android_kernel_oneplus_sm8650) / `16.0` | [`crdroidandroid/android_kernel_oneplus_sm8650-modules`](https://github.com/crdroidandroid/android_kernel_oneplus_sm8650-modules) / `16.0` |
 | PixelOS | [`PixelOS-Devices/android_kernel_oneplus_sm8650`](https://github.com/PixelOS-Devices/android_kernel_oneplus_sm8650) / `sixteen-qpr2` | [`PixelOS-Devices/android_kernel_oneplus_sm8650-modules`](https://github.com/PixelOS-Devices/android_kernel_oneplus_sm8650-modules) / `sixteen-qpr2` |
+| DerpFest | [`ppanzenboeck/android_kernel_oneplus_sm8650`](https://github.com/ppanzenboeck/android_kernel_oneplus_sm8650) / `derp17-edl` | [`ppanzenboeck/android_kernel_oneplus_sm8650-modules`](https://github.com/ppanzenboeck/android_kernel_oneplus_sm8650-modules) / `derp16.2-arb` |
+
+DerpFest 使用 Android 17 的 `clang-r596125` 工具链，并按 Android 17 源码跳过 LZ4 与 Droidspaces 补丁。
 
 ## KernelSU 与 SUSFS
 
@@ -107,7 +111,7 @@ YAAP-17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://githu
 | `extended` | 在标准支持基础上，额外启用虚拟 HCI、Lindroid EVDI DRM，以及相关扩展配置。 |
 
 > [!NOTE]
-> Droidspaces 补丁仅会应用于非 YAAP-16/YAAP-17 源码。
+> Droidspaces 补丁仅会应用于非 YAAP-16/YAAP-17/DerpFest 源码。
 
 ## 输出文件命名
 
@@ -133,7 +137,7 @@ sudo apt install -y \
   lz4 git python3 curl dwarves cpio gcc-aarch64-linux-gnu
 ```
 
-编译时 YAAP-17 使用 Release 中的 `clang-r596125` 工具链产物，其他源码使用 `clang-r563880c`，并执行：
+编译时 YAAP-17 和 DerpFest 使用 Release 中的 `clang-r596125` 工具链产物，其他源码使用 `clang-r563880c`，并执行：
 
 ```bash
 make O=out gki_defconfig vendor/pineapple_GKI.config vendor/oplus/pineapple_GKI.config

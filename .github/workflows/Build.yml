@@ -11,6 +11,7 @@ on:
           - LineageOS
           - Crdroid
           - PixelOS
+          - DerpFest
 
       ksu_type:
         description: "KernelSU Version"

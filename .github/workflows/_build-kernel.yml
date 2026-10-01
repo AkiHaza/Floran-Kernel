@@ -74,6 +74,10 @@ jobs:
             git clone --depth=1 -b seventeen https://github.com/AkiHaza/android_kernel_oneplus_sm8650.git sm8650
             git clone --depth=1 -b seventeen https://github.com/AkiHaza/android_kernel_oneplus_sm8650-modules.git sm8650-modules
 
+          elif [[ "${{ inputs.rom_source }}" == "DerpFest" ]]; then
+            git clone --depth=1 -b derp17-edl https://github.com/ppanzenboeck/android_kernel_oneplus_sm8650.git sm8650
+            git clone --depth=1 -b derp16.2-arb https://github.com/ppanzenboeck/android_kernel_oneplus_sm8650-modules.git sm8650-modules
+
           elif [[ "${{ inputs.rom_source }}" == "LineageOS" ]]; then
             git clone --depth=1 -b lineage-23.2 https://github.com/LineageOS/android_kernel_oneplus_sm8650.git sm8650
             git clone --depth=1 -b lineage-23.2 https://github.com/LineageOS/android_kernel_oneplus_sm8650-modules.git sm8650-modules
@@ -88,7 +92,7 @@ jobs:
 
           fi
 
-          if [[ "${{ inputs.rom_source }}" == "YAAP-17" ]]; then
+          if [[ "${{ inputs.rom_source }}" == "YAAP-17" || "${{ inputs.rom_source }}" == "DerpFest" ]]; then
             CLANG_VERSION="clang-r596125"
             CLANG_URL="https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r596125/linux-x86-refs_heads_android17-release-clang-r596125.tar.gz"
           else
@@ -108,14 +112,14 @@ jobs:
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Apply lz4 patch
-        if: inputs.lz4_enable && inputs.rom_source != 'YAAP-16' && inputs.rom_source != 'YAAP-17'
+        if: inputs.lz4_enable && inputs.rom_source != 'YAAP-16' && inputs.rom_source != 'YAAP-17' && inputs.rom_source != 'DerpFest'
         run: |
           cd sm8650
           cp ../patch/lz4opt.S lib/
           git apply -p1 < ../patch/lz4.patch || true
 
       - name: Apply Droidspaces patches
-        if: inputs.droidspaces != 'none' && inputs.rom_source != 'YAAP-16' && inputs.rom_source != 'YAAP-17'
+        if: inputs.droidspaces != 'none' && inputs.rom_source != 'YAAP-16' && inputs.rom_source != 'YAAP-17' && inputs.rom_source != 'DerpFest'
         run: |
           cd sm8650
 
@@ -142,7 +146,7 @@ jobs:
           patch -p1 -F 3 < ../patch/ntsync_compat_android14-6.1.patch || true
 
       - name: Apply Droidspaces Extended patches
-        if: inputs.droidspaces == 'extended' && inputs.rom_source != 'YAAP-16' && inputs.rom_source != 'YAAP-17'
+        if: inputs.droidspaces == 'extended' && inputs.rom_source != 'YAAP-16' && inputs.rom_source != 'YAAP-17' && inputs.rom_source != 'DerpFest'
         run: |
           cd sm8650
 
@@ -193,7 +197,7 @@ jobs:
 
       - name: Compile Kernel
         run: |
-          if [[ "${{ inputs.rom_source }}" == "YAAP-17" ]]; then
+          if [[ "${{ inputs.rom_source }}" == "YAAP-17" || "${{ inputs.rom_source }}" == "DerpFest" ]]; then
             CLANG_VERSION="clang-r596125"
           else
             CLANG_VERSION="clang-r563880c"
@@ -354,7 +358,7 @@ jobs:
           sed -i "s|CONFIG_MODULE_SIG_PROTECT=y|CONFIG_MODULE_SIG_PROTECT=n|" arch/arm64/configs/gki_defconfig
           echo "CONFIG_TMPFS_XATTR=y" >> arch/arm64/configs/gki_defconfig
 
-          if [[ "${{ inputs.rom_source }}" != "YAAP-16" && "${{ inputs.rom_source }}" != "YAAP-17" ]]; then
+          if [[ "${{ inputs.rom_source }}" != "YAAP-16" && "${{ inputs.rom_source }}" != "YAAP-17" && "${{ inputs.rom_source }}" != "DerpFest" ]]; then
             echo "CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE=y" >> arch/arm64/configs/gki_defconfig
           fi
 
@@ -473,7 +477,7 @@ jobs:
           echo "TIME=$TIME" >> $GITHUB_ENV
           echo "TIME_FORM=$TIME_FORM" >> $GITHUB_ENV
 
-          if [[ "${{ inputs.rom_source }}" == "YAAP-17" ]]; then
+          if [[ "${{ inputs.rom_source }}" == "YAAP-17" || "${{ inputs.rom_source }}" == "DerpFest" ]]; then
             CLANG_VERSION="clang-r596125"
             CLANG_URL="https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r596125/linux-x86-refs_heads_android17-release-clang-r596125.tar.gz"
           else
