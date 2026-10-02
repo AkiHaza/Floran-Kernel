@@ -340,7 +340,7 @@ jobs:
 
             while IFS= read -r reject; do
               case "${reject}" in
-                ./fs/namespace.c.rej|./fs/super.c.rej)
+                ./fs/exec.c.rej|./fs/namespace.c.rej|./fs/super.c.rej)
                   if ! grep -q '^@@' "${reject}"; then
                     echo "SUSFS reject has no patch hunk: ${reject}"
                     exit 1
