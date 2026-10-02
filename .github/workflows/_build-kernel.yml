@@ -450,7 +450,50 @@ jobs:
           fi
 
           make O=out gki_defconfig vendor/pineapple_GKI.config vendor/oplus/pineapple_GKI.config
+
+          if [[ "${{ inputs.rom_source }}" == "YAAP-17" ]]; then
+            # This workflow ships Image only; WALT must be linked into it.
+            scripts/config --file out/.config \
+              --disable SCHED_CASS --enable SCHED_WALT --disable SCHED_WALT_DEBUG
+            make O=out olddefconfig
+
+            # /proc/config.gz uses gki-stock_defconfig in this source tree.
+            # Preserve the actual build configuration and source revisions.
+            mkdir -p ../build-info
+            cp out/.config ../build-info/kernel.config
+            git rev-parse HEAD > ../build-info/kernel-base-commit.txt
+            git -C ../sm8650-modules rev-parse HEAD > ../build-info/modules-base-commit.txt
+            git -C .. rev-parse HEAD > ../build-info/workflow-commit.txt
+            clang --version > ../build-info/compiler.txt
+
+            if ! grep -qxF 'CONFIG_SCHED_WALT=y' out/.config ||
+               ! grep -qxF '# CONFIG_SCHED_CASS is not set' out/.config ||
+               ! grep -qxF '# CONFIG_SCHED_WALT_DEBUG is not set' out/.config; then
+              echo "::error::YAAP-17 requires built-in WALT with CASS and WALT_DEBUG disabled."
+              exit 1
+            fi
+          fi
+
           make -j$(nproc) O=out Image
+
+          if [[ "${{ inputs.rom_source }}" == "YAAP-17" ]]; then
+            cp out/.config ../build-info/kernel.config
+            cp out/modules.builtin ../build-info/modules.builtin
+            # Kbuild prefixes the source path with the install directory kernel/.
+            if ! grep -qxF 'kernel/kernel/sched/walt/sched-walt.ko' out/modules.builtin; then
+              echo "::error::WALT is missing from the built-in module list; refusing to package Image."
+              exit 1
+            fi
+            (cd out/arch/arm64/boot && sha256sum Image) > ../build-info/Image.sha256
+          fi
+
+      - name: Upload YAAP-17 build evidence
+        if: always() && inputs.rom_source == 'YAAP-17'
+        uses: actions/upload-artifact@v6
+        with:
+          name: Kernel_Build_Info_YAAP-17
+          path: build-info/
+          if-no-files-found: warn
 
       - name: Make AnyKernel3
         run: |
