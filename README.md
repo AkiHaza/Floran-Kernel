@@ -70,13 +70,23 @@ YAAP-17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://githu
 | ROM 源码 | Kernel 仓库 / 分支 | Modules 仓库 / 分支 |
 |---|---|---|
 | YAAP-16 | [`AkiHaza/android_kernel_oneplus_sm8650`](https://github.com/AkiHaza/android_kernel_oneplus_sm8650) / `sixteen` | [`AkiHaza/android_kernel_oneplus_sm8650-modules`](https://github.com/AkiHaza/android_kernel_oneplus_sm8650-modules) / `sixteen` |
-| YAAP-17 | [`AkiHaza/android_kernel_oneplus_sm8650`](https://github.com/AkiHaza/android_kernel_oneplus_sm8650) / `dev` | [`AkiHaza/android_kernel_oneplus_sm8650-modules`](https://github.com/AkiHaza/android_kernel_oneplus_sm8650-modules) / `seventeen` |
+| YAAP-17 | [`AkiHaza/android_kernel_oneplus_sm8650`](https://github.com/AkiHaza/android_kernel_oneplus_sm8650) / `seventeen` | [`AkiHaza/android_kernel_oneplus_sm8650-modules`](https://github.com/AkiHaza/android_kernel_oneplus_sm8650-modules) / `seventeen` |
 | LineageOS | [`LineageOS/android_kernel_oneplus_sm8650`](https://github.com/LineageOS/android_kernel_oneplus_sm8650) / `lineage-23.2` | [`LineageOS/android_kernel_oneplus_sm8650-modules`](https://github.com/LineageOS/android_kernel_oneplus_sm8650-modules) / `lineage-23.2` |
 | crDroid | [`crdroidandroid/android_kernel_oneplus_sm8650`](https://github.com/crdroidandroid/android_kernel_oneplus_sm8650) / `16.0` | [`crdroidandroid/android_kernel_oneplus_sm8650-modules`](https://github.com/crdroidandroid/android_kernel_oneplus_sm8650-modules) / `16.0` |
 | PixelOS | [`PixelOS-Devices/android_kernel_oneplus_sm8650`](https://github.com/PixelOS-Devices/android_kernel_oneplus_sm8650) / `sixteen-qpr2` | [`PixelOS-Devices/android_kernel_oneplus_sm8650-modules`](https://github.com/PixelOS-Devices/android_kernel_oneplus_sm8650-modules) / `sixteen-qpr2` |
 | DerpFest | [`ppanzenboeck/android_kernel_oneplus_sm8650`](https://github.com/ppanzenboeck/android_kernel_oneplus_sm8650) / `lineage-23.2` | [`ppanzenboeck/android_kernel_oneplus_sm8650-modules`](https://github.com/ppanzenboeck/android_kernel_oneplus_sm8650-modules) / `derp16.2-arb` |
 
 DerpFest 使用 Android 17 的 `clang-r596125` 工具链；在 **Build Android17 Kernel** 中可勾选 LZ4 补丁，并选择 `standard` 或 `extended` Droidspaces 支持。YAAP-17 会忽略这两个选项。
+
+### YAAP-17 的 WALT 构建与安装
+
+YAAP-17 在合并配置后设置 `CONFIG_SCHED_WALT=y`、`CONFIG_ARM_QCOM_CPUFREQ_HW=y`，关闭 CASS 和 WALT_DEBUG，再运行 `olddefconfig`。WALT 直接使用 Qualcomm CPUFreq HW 提供的周期计数器，因此两者都需要内置。工作流检查真实的 `out/.config`、`modules.builtin` 和计数器符号；构建证据上传到 `Kernel_Build_Info_YAAP-17`。
+
+YAAP-17 使用固定版本的官方 AnyKernel3。安装包更新当前槽位的 `boot`，并清理 `vendor_boot` 全部 ramdisk 片段中旧 `qcom-cpufreq-hw`、`sched-walt` 的模块加载清单；若独立 `recovery` 分区使用共享内核，也会处理其清单。有独立内核的 recovery 保留原样。实际 `.ko` 文件保留。
+
+安装前需要挂载可读的 vendor/system 模块目录，并在 `/sdcard` 挂载可持久保存的内部存储。原始镜像保存在 `/sdcard/YAAP-WALT-backups/`。安装器先验证所有新镜像，再写入并回读校验；写入失败时尝试恢复已经开始修改的分区。若仍有外部分区加载旧模块、二进制模块索引或不支持的 ramdisk 布局，会在写入前终止。
+
+刷入并启动后，以 `/proc/sys/walt`、`/sys/module/sched_walt`、`/proc/kallsyms` 中的 WALT 符号及可用 governor 验证运行状态。当前源码的 `/proc/config.gz` 使用预置 `gki-stock_defconfig`，应以构建证据中的 `kernel.config` 确认真实配置。内置 WALT 不会出现在 `/proc/modules`；是否切换到 `walt` governor 取决于 ROM 的启动配置。
 
 ## KernelSU 与 SUSFS
 
@@ -134,7 +144,7 @@ DerpFest 使用 Android 17 的 `clang-r596125` 工具链；在 **Build Android17
 sudo apt update
 sudo apt install -y \
   bc bison flex libssl-dev libelf-dev libdw-dev build-essential \
-  lz4 git python3 curl dwarves cpio gcc-aarch64-linux-gnu
+  lz4 git python3 curl dwarves cpio gcc-aarch64-linux-gnu busybox
 ```
 
 编译时 YAAP-17 和 DerpFest 使用 Release 中的 `clang-r596125` 工具链产物，其他源码使用 `clang-r563880c`，并执行：
@@ -144,11 +154,22 @@ make O=out gki_defconfig vendor/pineapple_GKI.config vendor/oplus/pineapple_GKI.
 make -j"$(nproc)" O=out Image
 ```
 
+YAAP-17 还需在这两条命令之间运行：
+
+```bash
+scripts/config --file out/.config --disable SCHED_CASS --enable SCHED_WALT \
+  --disable SCHED_WALT_DEBUG --enable ARM_QCOM_CPUFREQ_HW
+make O=out olddefconfig
+```
+
+安装器测试：`BUSYBOX=$(command -v busybox) python3 -m unittest discover -s tests -v`。可选的真实镜像集成测试还需要 `WALT_TEST_MAGISKBOOT` 指向 Magisk v31.0 的主机版 magiskboot，`WALT_TEST_AK3` 指向固定版本的官方 AnyKernel3 checkout。
+
 完整的源码拉取、补丁应用、KernelSU/SUSFS 集成与打包步骤，请以 [`.github/workflows/build-android16.yml`](.github/workflows/build-android16.yml)（Android 16）和 [`.github/workflows/build-android17.yml`](.github/workflows/build-android17.yml)（Android 17）为准；两者共享 [`.github/workflows/_build-kernel.yml`](.github/workflows/_build-kernel.yml) 中的构建逻辑。
 
 ## 致谢
 
 - [AnyKernel3](https://github.com/AkiHaza/AnyKernel3)
+- [官方 AnyKernel3（YAAP-17 固定版本）](https://github.com/osm0sis/AnyKernel3/tree/020dfeccf9d7e962a48400fc94d3e451df92eead)
 - [KernelSU](https://github.com/tiann/KernelSU)
 - [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)
 - [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU)

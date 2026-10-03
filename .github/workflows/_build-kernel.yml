@@ -62,7 +62,12 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt update
-          sudo apt install -y bc bison flex libssl-dev libelf-dev libdw-dev build-essential lz4 git python3 curl dwarves cpio gcc-aarch64-linux-gnu
+          sudo apt install -y bc bison flex libssl-dev libelf-dev libdw-dev build-essential lz4 git python3 curl dwarves cpio gcc-aarch64-linux-gnu busybox
+
+      - name: Test YAAP-17 installer
+        if: inputs.rom_source == 'YAAP-17'
+        run: |
+          BUSYBOX=$(command -v busybox) python3 -m unittest discover -s tests -v
 
       - name: Clone Kernel Source and Download Clang Toolchain
         run: |
@@ -452,9 +457,11 @@ jobs:
           make O=out gki_defconfig vendor/pineapple_GKI.config vendor/oplus/pineapple_GKI.config
 
           if [[ "${{ inputs.rom_source }}" == "YAAP-17" ]]; then
-            # This workflow ships Image only; WALT must be linked into it.
+            # WALT directly calls the Qualcomm hardware cycle counter.
+            # Both components must be linked into Image.
             scripts/config --file out/.config \
-              --disable SCHED_CASS --enable SCHED_WALT --disable SCHED_WALT_DEBUG
+              --disable SCHED_CASS --enable SCHED_WALT --disable SCHED_WALT_DEBUG \
+              --enable ARM_QCOM_CPUFREQ_HW
             make O=out olddefconfig
 
             # /proc/config.gz uses gki-stock_defconfig in this source tree.
@@ -467,9 +474,10 @@ jobs:
             clang --version > ../build-info/compiler.txt
 
             if ! grep -qxF 'CONFIG_SCHED_WALT=y' out/.config ||
+               ! grep -qxF 'CONFIG_ARM_QCOM_CPUFREQ_HW=y' out/.config ||
                ! grep -qxF '# CONFIG_SCHED_CASS is not set' out/.config ||
                ! grep -qxF '# CONFIG_SCHED_WALT_DEBUG is not set' out/.config; then
-              echo "::error::YAAP-17 requires built-in WALT with CASS and WALT_DEBUG disabled."
+              echo "::error::YAAP-17 requires built-in WALT and Qualcomm CPUFreq HW, with CASS and WALT_DEBUG disabled."
               exit 1
             fi
           fi
@@ -480,20 +488,18 @@ jobs:
             cp out/.config ../build-info/kernel.config
             cp out/modules.builtin ../build-info/modules.builtin
             # Kbuild prefixes the source path with the install directory kernel/.
-            if ! grep -qxF 'kernel/kernel/sched/walt/sched-walt.ko' out/modules.builtin; then
-              echo "::error::WALT is missing from the built-in module list; refusing to package Image."
-              exit 1
-            fi
+            for builtin in kernel/kernel/sched/walt/sched-walt.ko kernel/drivers/cpufreq/qcom-cpufreq-hw.ko; do
+              if ! grep -qxF "$builtin" out/modules.builtin; then
+                echo "::error::$builtin is missing from the built-in module list; refusing to package Image."
+                exit 1
+              fi
+            done
+            (set -o pipefail
+             llvm-nm --defined-only out/vmlinux | \
+               awk '$NF == "qcom_cpufreq_get_cpu_cycle_counter" { print; found = 1 } END { exit !found }') \
+               > ../build-info/walt-cycle-counter-symbol.txt
             (cd out/arch/arm64/boot && sha256sum Image) > ../build-info/Image.sha256
           fi
-
-      - name: Upload YAAP-17 build evidence
-        if: always() && inputs.rom_source == 'YAAP-17'
-        uses: actions/upload-artifact@v6
-        with:
-          name: Kernel_Build_Info_YAAP-17
-          path: build-info/
-          if-no-files-found: warn
 
       - name: Make AnyKernel3
         run: |
@@ -521,10 +527,29 @@ jobs:
           fi
 
           ZIP_NAME="${{ inputs.rom_source }}-${ZIP_PREFIX}-$(date -u +"%m%d")"
-          git clone --depth=1 https://github.com/AkiHaza/AnyKernel3.git
-          cp sm8650/out/arch/arm64/boot/Image AnyKernel3/Image
+          if [[ "${{ inputs.rom_source }}" == "YAAP-17" ]]; then
+            # This revision supports all vendor_boot v4 ramdisk fragments.
+            AK3_REV=020dfeccf9d7e962a48400fc94d3e451df92eead
+            git init AnyKernel3
+            git -C AnyKernel3 remote add origin https://github.com/osm0sis/AnyKernel3.git
+            git -C AnyKernel3 fetch --depth=1 origin "$AK3_REV"
+            git -C AnyKernel3 checkout --detach FETCH_HEAD
+            python3 scripts/prepare_yaap_anykernel.py AnyKernel3 sm8650/out/arch/arm64/boot/Image
+            printf '%s\n' "$AK3_REV" > build-info/anykernel-commit.txt
+          else
+            git clone --depth=1 https://github.com/AkiHaza/AnyKernel3.git
+            cp sm8650/out/arch/arm64/boot/Image AnyKernel3/Image
+          fi
           cd AnyKernel3
           zip -r9 ../"${ZIP_NAME}.zip" * -x .git
+
+      - name: Upload YAAP-17 build evidence
+        if: always() && inputs.rom_source == 'YAAP-17'
+        uses: actions/upload-artifact@v6
+        with:
+          name: Kernel_Build_Info_YAAP-17
+          path: build-info/
+          if-no-files-found: warn
 
       - name: Upload ZIP artifact
         uses: actions/upload-artifact@v6
