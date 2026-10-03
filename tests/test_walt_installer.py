@@ -39,7 +39,7 @@ class WaltInstallerTests(unittest.TestCase):
         self.applets = self.base / "applets"
         self.applets.mkdir()
         for name in ("awk", "cat", "chmod", "cmp", "cp", "find", "grep", "ln",
-                     "mkdir", "rm", "sed", "sha256sum", "sort", "stat", "wc"):
+                     "mkdir", "mktemp", "rm", "sed", "sha256sum", "sort", "stat", "wc"):
             (self.applets / name).symlink_to(Path(BUSYBOX).resolve())
         for name in ("partitions", "backup", "transaction/ready", "new", "package/tools"):
             (self.base / name).mkdir(parents=True, exist_ok=True)
@@ -50,7 +50,7 @@ class WaltInstallerTests(unittest.TestCase):
             self.originals[part] = original
             (self.base / "partitions" / f"{part}_a").write_bytes(original)
             (self.base / "new" / f"{part}.img").write_bytes(replacement)
-        self.helpers = section(self.source, "walt_hash()", "# Late-loaded partitions")
+        self.helpers = section(self.source, "walt_hash()", "# Inspect actual late-load requests")
         self.stage = section(self.source, "walt_stage_image() (", "walt_stage_image vendor_boot ||")
         self.transaction = section(self.source, "walt_stage_image vendor_boot ||")
         # A regular fixture file stands in for a detected recovery block node.
@@ -272,19 +272,15 @@ walt_stage_image() {
                 self.assertEqual(result.returncode == 0, success, result.stdout + result.stderr)
 
     def external_check(self):
-        code = section(self.source, "walt_check_external_modules() {",
-                       "walt_check_external_modules ||")
-        # Relocate absolute Android filesystem roots; no host filesystem is read.
-        code = code.replace('"/dev/block/mapper/', '"$SANDBOX/dev/block/mapper/')
-        code = code.replace('"/${family}_dlkm/', '"$SANDBOX/${family}_dlkm/')
-        code = code.replace('"/$family/lib/modules"', '"$SANDBOX/$family/lib/modules"')
-        code = code.replace('[ -b ', '[ -f ')
-        return self.run_ash(code + "\nwalt_check_external_modules\n")
+        code = '. "$EXTERNAL_HELPER"\nwalt_check_external_modules "$SANDBOX/vendor/lib/modules" "$SANDBOX/system/lib/modules"\n'
+        return self.run_ash(code, EXTERNAL_HELPER=INSTALLER.parent / "walt-external-modules.sh",
+                            TMPDIR=self.base)
 
     def make_module_tree(self, family):
         directory = self.base / family / "lib/modules"
         directory.mkdir(parents=True, exist_ok=True)
         (directory / "modules.dep").write_text("safe.ko:\n")
+        (directory / "modules.load").write_text("safe.ko\n")
         return directory
 
     def test_external_check_requires_both_vendor_and_system(self):
@@ -293,14 +289,13 @@ walt_stage_image() {
         self.make_module_tree("vendor")
         self.assertEqual(self.external_check().returncode, 0)
 
-    def test_detected_dlkm_requires_its_own_readable_module_tree(self):
-        self.make_module_tree("system")
+    def test_nested_system_modules_are_discovered(self):
+        directory = self.base / "system/lib/modules/android17-6.1"
+        directory.mkdir(parents=True)
+        (directory / "modules.load").write_text("safe.ko\n")
         self.make_module_tree("vendor")
-        mapper = self.base / "dev/block/mapper"
-        mapper.mkdir(parents=True)
-        (mapper / "vendor_dlkm_a").write_text("mapped device fixture")
         self.assertNotEqual(self.external_check().returncode, 0)
-        self.make_module_tree("vendor_dlkm")
+        (directory / "modules.dep").write_text("safe.ko:\n")
         self.assertEqual(self.external_check().returncode, 0)
 
     def test_external_references_and_binary_indexes_fail_but_debug_does_not(self):
@@ -318,9 +313,10 @@ walt_stage_image() {
         self.assertNotEqual(self.external_check().returncode, 0)
 
     def test_backup_storage_rejects_temporary_filesystems(self):
-        check = section(self.source, 'case "$(stat -f -c %T /sdcard', "backup_bytes=0")
-        for filesystem, success in (("tmpfs", False), ("rootfs", False), ("ramfs", False),
-                                    ("ext4", True), ("f2fs", True), ("fuse", True)):
+        check = section(self.source, 'case "$(stat -f -c %t /sdcard', "backup_bytes=0")
+        for filesystem, success in (("1021994", False), ("858458f6", False), ("UNKNOWN", False),
+                                    ("ef53", True), ("f2f52010", True), ("65735546", True),
+                                    ("5dca2df5", True), ("4d44", True), ("2011bab0", True)):
             with self.subTest(filesystem=filesystem):
                 result = self.run_ash('stat() { printf "%s\\n" "$TEST_FILESYSTEM"; }\n' + check,
                                       TEST_FILESYSTEM=filesystem)

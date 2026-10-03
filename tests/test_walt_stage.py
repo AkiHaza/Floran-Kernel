@@ -11,6 +11,7 @@ the installer's top-level checks or write/restore loop.
 
 import hashlib
 import importlib.util
+import json
 import os
 from pathlib import Path
 import re
@@ -21,6 +22,7 @@ import tempfile
 import unittest
 
 from test_walt_vendor_boot import make_cpio, make_dtb, make_image
+from test_prepare_yaap_anykernel import arm64_tool_bytes
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -100,7 +102,20 @@ class StageIntegrationTests(unittest.TestCase):
         kernel = self.root / "Image"
         self.new_kernel = fake_kernel(b"new WALT test Image\n")
         kernel.write_bytes(self.new_kernel)
-        self.preparer.prepare(self.package, kernel)
+        # Only the package guard sees these synthetic AArch64 ELF headers. They
+        # are never executed; staging still runs the real host-architecture tools.
+        arm64_inputs = {}
+        manifest = {}
+        for name in ("busybox", "magiskboot"):
+            path = self.root / f"arm64-header-{name}"
+            path.write_bytes(arm64_tool_bytes(name.encode()))
+            arm64_inputs[name] = path
+            manifest[name] = {"source": f"fixture://{name}", "version": "test-header",
+                              "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        tool_info = self.root / "tool-info.json"
+        tool_info.write_text(json.dumps(manifest))
+        self.preparer.prepare(self.package, kernel, arm64_inputs["busybox"],
+                              arm64_inputs["magiskboot"], tool_info)
         shutil.copy2(self.magiskboot, self.package / "tools/magiskboot")
         shutil.copy2(self.busybox, self.package / "tools/busybox")
         for name in ("magiskboot", "busybox"):
@@ -240,6 +255,31 @@ getprop() { return 0; }
         checked = self.unpack_ready("recovery")
         self.assert_modules_patched(checked / "ramdisk.cpio")
         self.assertFalse((checked / "kernel").exists())
+
+    def assert_recovery_only_backed_up(self):
+        self.assertEqual({path.name for path in self.backup.iterdir()}, {"recovery.img"})
+        self.assertEqual((self.backup / "recovery.img").read_bytes(), self.initial["recovery"])
+        self.assertEqual(self.partition["recovery"].read_bytes(), self.initial["recovery"])
+        self.assertEqual(list((self.transaction / "ready").iterdir()), [])
+
+    def test_shared_kernel_recovery_without_module_metadata_is_only_backed_up(self):
+        ramdisk = self.compressed_cpio("recovery", {"init.fixture": b"recovery has no module metadata\n"})
+        self.add_partition("recovery", boot_v4(b"", ramdisk))
+        self.stage("recovery")
+        self.assert_recovery_only_backed_up()
+
+    def test_shared_kernel_recovery_with_clean_module_metadata_is_only_backed_up(self):
+        files = {
+            "lib/modules/modules.load": b"other.ko\nhelper.ko\n",
+            "lib/modules/modules.dep": b"other.ko: helper.ko\nhelper.ko:\n",
+            "lib/modules/modules.alias": b"alias test-other other\n",
+            "lib/modules/other.ko": b"unchanged other module bytes\n",
+            "lib/modules/helper.ko": b"unchanged helper module bytes\n",
+        }
+        ramdisk = self.compressed_cpio("recovery", files)
+        self.add_partition("recovery", boot_v4(b"", ramdisk))
+        self.stage("recovery")
+        self.assert_recovery_only_backed_up()
 
     def test_recovery_with_own_kernel_is_not_staged(self):
         ramdisk = self.compressed_cpio("recovery", self.module_files())

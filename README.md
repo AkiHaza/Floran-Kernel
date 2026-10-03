@@ -82,7 +82,9 @@ DerpFest 使用 Android 17 的 `clang-r596125` 工具链；在 **Build Android17
 
 YAAP-17 在合并配置后设置 `CONFIG_SCHED_WALT=y`、`CONFIG_ARM_QCOM_CPUFREQ_HW=y`，关闭 CASS 和 WALT_DEBUG，再运行 `olddefconfig`。WALT 直接使用 Qualcomm CPUFreq HW 提供的周期计数器，因此两者都需要内置。工作流检查真实的 `out/.config`、`modules.builtin` 和计数器符号；构建证据上传到 `Kernel_Build_Info_YAAP-17`。
 
-YAAP-17 使用固定版本的官方 AnyKernel3。安装包更新当前槽位的 `boot`，并清理 `vendor_boot` 全部 ramdisk 片段中旧 `qcom-cpufreq-hw`、`sched-walt` 的模块加载清单；若独立 `recovery` 分区使用共享内核，也会处理其清单。有独立内核的 recovery 保留原样。实际 `.ko` 文件保留。
+YAAP-17 使用固定版本的官方 AnyKernel3 core，配合经过 SHA256 和 ELF 架构检查的 ARM64 BusyBox、Magisk v31.0 magiskboot，适配只支持 64 位的 SM8650。工具来源和摘要保存在包内 `tools/toolchain.json`，并上传到构建证据。
+
+安装包更新当前槽位的 `boot`，并清理 `vendor_boot` 全部 ramdisk 片段中旧 `qcom-cpufreq-hw`、`sched-walt` 的模块加载清单；若独立 `recovery` 分区使用共享内核，也会检查其清单。有独立内核或无需修改模块清单的 recovery 保留原样。实际 `.ko` 文件保留。
 
 安装前需要挂载可读的 vendor/system 模块目录，并在 `/sdcard` 挂载可持久保存的内部存储。原始镜像保存在 `/sdcard/YAAP-WALT-backups/`。安装器先验证所有新镜像，再写入并回读校验；写入失败时尝试恢复已经开始修改的分区。若仍有外部分区加载旧模块、二进制模块索引或不支持的 ramdisk 布局，会在写入前终止。
 

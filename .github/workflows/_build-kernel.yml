@@ -534,7 +534,43 @@ jobs:
             git -C AnyKernel3 remote add origin https://github.com/osm0sis/AnyKernel3.git
             git -C AnyKernel3 fetch --depth=1 origin "$AK3_REV"
             git -C AnyKernel3 checkout --detach FETCH_HEAD
-            python3 scripts/prepare_yaap_anykernel.py AnyKernel3 sm8650/out/arch/arm64/boot/Image
+            # SM8650 cannot execute the template's 32-bit ARM tools.
+            mkdir -p yaap-tools
+            curl -fL --retry 3 --max-time 120 \
+              https://raw.githubusercontent.com/AkiHaza/AnyKernel3/b96f1c0e35fcce583b916eb267ac0347d59b9629/tools/busybox \
+              -o yaap-tools/busybox
+            curl -fL --retry 3 --max-time 120 \
+              https://github.com/topjohnwu/Magisk/releases/download/v31.0/Magisk-v31.0.apk \
+              -o yaap-tools/Magisk-v31.0.apk
+            echo '4d60ab3f5a59ebb2ca863f2f514e6924401b581e9b64f602665c008177626651  yaap-tools/busybox' | sha256sum -c -
+            echo '2c8a488b9a5293e578e95ae4f07e3c57aba4feec4a52ca4dd852a2692d6dd4e8  yaap-tools/Magisk-v31.0.apk' | sha256sum -c -
+            python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          tools = Path("yaap-tools")
+          with ZipFile(tools / "Magisk-v31.0.apk") as apk:
+              (tools / "magiskboot").write_bytes(apk.read("lib/arm64-v8a/libmagiskboot.so"))
+          manifest = {
+              "busybox": {
+                  "source": "https://raw.githubusercontent.com/AkiHaza/AnyKernel3/b96f1c0e35fcce583b916eb267ac0347d59b9629/tools/busybox",
+                  "version": "b96f1c0e35fcce583b916eb267ac0347d59b9629",
+              },
+              "magiskboot": {
+                  "source": "https://github.com/topjohnwu/Magisk/releases/download/v31.0/Magisk-v31.0.apk#lib/arm64-v8a/libmagiskboot.so",
+                  "version": "31.0",
+              },
+          }
+          for name, metadata in manifest.items():
+              metadata["sha256"] = hashlib.sha256((tools / name).read_bytes()).hexdigest()
+          (tools / "toolchain.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          PY
+            python3 scripts/prepare_yaap_anykernel.py AnyKernel3 sm8650/out/arch/arm64/boot/Image \
+              --busybox yaap-tools/busybox --magiskboot yaap-tools/magiskboot \
+              --tool-info yaap-tools/toolchain.json
+            cp yaap-tools/toolchain.json build-info/anykernel-tools.json
             printf '%s\n' "$AK3_REV" > build-info/anykernel-commit.txt
           else
             git clone --depth=1 https://github.com/AkiHaza/AnyKernel3.git

@@ -30,7 +30,7 @@ class WaltRamdiskTests(unittest.TestCase):
         # relying on GNU awk/find/cp features available on the development host.
         self.applets = self.base / "busybox-applets"
         self.applets.mkdir()
-        for applet in ("awk", "find", "cp", "cmp", "mv", "mktemp", "rm", "stat", "chmod", "tr"):
+        for applet in ("awk", "find", "cp", "cmp", "mv", "mktemp", "rm", "stat", "chmod", "tr", "readlink"):
             (self.applets / applet).symlink_to(Path(BUSYBOX).resolve())
 
     def write(self, relative, text, mode=0o644):
@@ -209,6 +209,53 @@ class WaltRamdiskTests(unittest.TestCase):
         (directory / "subdirectory").symlink_to(self.base / "absent-module-subtree",
                                                 target_is_directory=True)
         self.patch(success=False)
+
+    def test_actual_android_partition_aliases_are_preserved(self):
+        aliases = {
+            "bin": "/system/bin", "etc": "/system/etc", "product": "/system/product",
+            "system_ext": "/system/system_ext", "d": "/sys/kernel/debug",
+            "bugreports": "/data/user_de/0/com.android.shell/files/bugreports",
+            **{f"odm/{name}": f"/vendor/odm/{name}" for name in
+               ("app", "bin", "etc", "firmware", "framework", "lib", "lib64", "overlay", "priv-app", "usr")},
+            "odm_dlkm/etc": "/odm/odm_dlkm/etc", "vendor_dlkm/etc": "/vendor/vendor_dlkm/etc",
+        }
+        for relative, target in aliases.items():
+            link = self.root / relative
+            link.parent.mkdir(parents=True, exist_ok=True)
+            link.symlink_to(target)
+        self.write("init.rc", "on boot\n    setprop test.property 1\n")
+        # This recovery layout has no module metadata, as in the device image.
+        before = self.snapshot()
+        self.patch()
+        self.assertEqual(self.snapshot(), before)
+        for relative, target in aliases.items():
+            self.assertTrue((self.root / relative).is_symlink())
+            self.assertEqual(os.readlink(self.root / relative), target)
+        # The aliases do not prevent real, internal module metadata edits.
+        load = self.write("lib/modules/modules.load", "qcom-cpufreq-hw\nother.ko\n")
+        self.patch()
+        self.assertEqual(load.read_text(), "other.ko\n")
+
+    def test_android_alias_allowlist_requires_exact_path_and_target(self):
+        outside = self.base / "outside"
+        outside.mkdir()
+        external = outside / "modules.load"
+        external.write_text("qcom-cpufreq-hw.ko\n")
+        for relative, target in (("odm/lib", str(outside)),
+                                 ("fragment/odm/lib", "/vendor/odm/lib"),
+                                 ("lib/modules", "/vendor/odm/lib")):
+            with self.subTest(relative=relative, target=target):
+                link = self.root / relative
+                link.parent.mkdir(parents=True, exist_ok=True)
+                link.symlink_to(target)
+                self.patch(success=False)
+                self.assertEqual(external.read_text(), "qcom-cpufreq-hw.ko\n")
+                link.unlink()
+
+    def test_android_aliases_do_not_skip_script_preflight(self):
+        (self.root / "odm").mkdir()
+        (self.root / "odm/lib").symlink_to("/vendor/odm/lib")
+        self.assert_preflight_failure("init.rc", "on boot\n    insmod /lib/modules/qcom-cpufreq-hw.ko\n")
 
     def test_rejects_root_symlink(self):
         link = self.base / "linked-root"

@@ -160,6 +160,22 @@ walt_patch_ramdisk() (
     while IFS= read -r -d '' entry; do
         name=${entry##*/}
         if [ -L "$entry" ]; then
+            # Android recovery contains these partition aliases even when it
+            # has no modules. Preserve the exact conventional path/target pair;
+            # find does not follow it, and this helper never reads its target.
+            # A different target, a nested lookalike or a modules link still
+            # goes through the refusal checks below.
+            link_target=$(readlink -- "$entry") || exit 1
+            case "${entry#"$root"/}:$link_target" in
+                bin:/system/bin|etc:/system/etc|product:/system/product|system_ext:/system/system_ext|\
+                bugreports:/data/user_de/0/com.android.shell/files/bugreports|d:/sys/kernel/debug|\
+                odm/app:/vendor/odm/app|odm/bin:/vendor/odm/bin|odm/etc:/vendor/odm/etc|\
+                odm/firmware:/vendor/odm/firmware|odm/framework:/vendor/odm/framework|\
+                odm/lib:/vendor/odm/lib|odm/lib64:/vendor/odm/lib64|odm/overlay:/vendor/odm/overlay|\
+                odm/priv-app:/vendor/odm/priv-app|odm/usr:/vendor/odm/usr|\
+                odm_dlkm/etc:/odm/odm_dlkm/etc|vendor_dlkm/etc:/vendor/vendor_dlkm/etc)
+                    continue ;;
+            esac
             # Android absolute targets may be absent in the installer namespace.
             # Never use -d alone to decide whether a module search path is safe:
             # it would silently accept a dangling lib/modules or partition link.

@@ -21,6 +21,7 @@ AK3_STAGE_ONLY=1
 . tools/ak3-core.sh
 . "$AKHOME/walt-ramdisk.sh"
 . "$AKHOME/walt-vendor-boot.sh"
+. "$AKHOME/walt-external-modules.sh"
 
 WALT_PACKAGE=$AKHOME
 WALT_TRANSACTION=$AKHOME/walt-transaction
@@ -33,6 +34,9 @@ WALT_VENDOR_BOOT=${BLOCK%/*}/vendor_boot$SLOT
 WALT_RECOVERY=${BLOCK%/*}/recovery$SLOT
 [ -b "$WALT_VENDOR_BOOT" ] || abort "Missing vendor_boot partition."
 mkdir -p "$WALT_TRANSACTION/ready" || abort "Cannot create staging directory."
+TMPDIR=$WALT_TRANSACTION/tmp
+mkdir -p "$TMPDIR" || abort "Cannot create temporary directory."
+export TMPDIR
 
 walt_hash() ( set -o pipefail; sha256sum "$1" | awk '{print $1}'; )
 walt_same_image() {
@@ -57,37 +61,13 @@ walt_target() {
   esac
 }
 
-# Late-loaded partitions are outside this installer's ramdisk transaction.
-# Refuse a layout that would still request one of the newly built-in modules.
-walt_check_external_modules() {
-  local family root file seen
-  for family in vendor system; do
-    seen=0
-    if [ -b "/dev/block/mapper/${family}_dlkm$SLOT" ] || [ -b "/dev/block/mapper/${family}_dlkm" ]; then
-      [ -r "/${family}_dlkm/lib/modules/modules.dep" ] || return 1
-    fi
-    for root in "/$family/lib/modules" "/${family}_dlkm/lib/modules"; do
-      [ -r "$root/modules.dep" ] || continue
-      seen=1
-      for file in "$root"/modules.*; do
-        [ -f "$file" ] || continue
-        case "$file" in
-          *.bin) ui_print "Unsupported binary module index: $file"; return 1;;
-          *.builtin|*.builtin.*) continue;;
-        esac
-        if grep -aEq '(^|[[:space:]/:])(qcom[-_]cpufreq[-_]hw|sched[-_]walt)(\.ko(\.(gz|xz|zst))?)?([[:space:]:]|$)' "$file"; then
-          ui_print "Unmanaged module reference: $file"
-          return 1
-        fi
-      done
-    done
-    [ "$seen" = 1 ] || return 1
-  done
-}
-walt_check_external_modules || abort "Mount vendor/system modules and remove conflicting late-load references before installing."
+# Inspect actual late-load requests, including versioned system module trees.
+walt_check_external_modules || abort "Vendor/system module loading verification failed; see the diagnostics above."
 
-case "$(stat -f -c %T /sdcard 2>/dev/null)" in
-  ext2/ext3|ext4|f2fs|fuse|fuseblk|sdcardfs|msdos|exfat) ;;
+# Some Android BusyBox builds print UNKNOWN for FUSE with %T. The numeric
+# filesystem magic is stable across BusyBox versions.
+case "$(stat -f -c %t /sdcard 2>/dev/null)" in
+  ef53|f2f52010|65735546|5dca2df5|4d44|2011bab0) ;;
   *) abort "Mount persistent internal storage at /sdcard before installing.";;
 esac
 backup_bytes=0
@@ -116,15 +96,15 @@ walt_check_cpio_names() (
 
 walt_patch_roots() {
   local root patched=0 before after
+  WALT_METADATA_CHANGED=0
   for root in "$RAMDISK" "$VENDORRD"/*; do
     [ -d "$root" ] || continue
-    if [ "$1" = verify ]; then
-      before=$(walt_metadata_hash "$root") || return 1
-    fi
+    before=$(walt_metadata_hash "$root") || return 1
     walt_patch_ramdisk "$root" || return 1
-    if [ "$1" = verify ]; then
-      after=$(walt_metadata_hash "$root") || return 1
-      [ "$before" = "$after" ] || return 1
+    after=$(walt_metadata_hash "$root") || return 1
+    if [ "$before" != "$after" ]; then
+      [ "$1" != verify ] || return 1
+      WALT_METADATA_CHANGED=1
     fi
     patched=1
   done
@@ -172,6 +152,10 @@ walt_stage_image() (
     fi
     unpack_ramdisk
     walt_patch_roots patch || exit 1
+    if [ "$WALT_METADATA_CHANGED" = 0 ]; then
+      ui_print "$part module metadata needs no changes; retaining original image."
+      exit 0
+    fi
     repack_ramdisk
   fi
   flash_boot
@@ -235,7 +219,7 @@ walt_restore() {
   exit 1
 }
 trap walt_restore EXIT HUP INT TERM
-ui_print "All images verified. Updating vendor_boot, shared-kernel recovery and boot."
+ui_print "All required images verified. Updating prepared partitions."
 for part in vendor_boot recovery boot; do
   [ -f "$WALT_TRANSACTION/ready/$part.img" ] || continue
   target=$(walt_target "$part") || abort "Invalid partition in write plan."
