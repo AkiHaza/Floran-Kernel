@@ -76,9 +76,12 @@ jobs:
             git clone --depth=1 -b sixteen https://github.com/AkiHaza/android_kernel_oneplus_sm8650-modules.git sm8650-modules
 
           elif [[ "${{ inputs.rom_source }}" == "YAAP-17" ]]; then
-            YAAP_KERNEL_BRANCH=seventeen
+            # WALT lives on the dedicated kernel branch; modules remain on
+            # the YAAP branch because the modules repository has no WALT branch.
+            YAAP_KERNEL_BRANCH=seventeen-walt
+            YAAP_MODULES_BRANCH=seventeen
             git clone --depth=1 -b "$YAAP_KERNEL_BRANCH" https://github.com/AkiHaza/android_kernel_oneplus_sm8650.git sm8650
-            git clone --depth=1 -b "$YAAP_KERNEL_BRANCH" https://github.com/AkiHaza/android_kernel_oneplus_sm8650-modules.git sm8650-modules
+            git clone --depth=1 -b "$YAAP_MODULES_BRANCH" https://github.com/AkiHaza/android_kernel_oneplus_sm8650-modules.git sm8650-modules
 
           elif [[ "${{ inputs.rom_source }}" == "DerpFest" ]]; then
             git clone --depth=1 -b lineage-23.2 https://github.com/ppanzenboeck/android_kernel_oneplus_sm8650.git sm8650
