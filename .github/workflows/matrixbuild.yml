@@ -16,6 +16,11 @@ on:
           - "none"
           - "standard"
           - "extended"
+      docker:
+        description: "⚠️ DANGER: Docker support (namespaces/cgroup v2/USER_NS/overlay/btrfs). May bootloop some devices! No bridge/nftables/IPVS/CFS_BANDWIDTH (confirmed bootloop on sm8650)."
+        required: true
+        type: boolean
+        default: false
       release_version:
         description: "Release version (leave empty to use date)"
         required: false
@@ -122,6 +127,18 @@ jobs:
           echo "CONFIG_DRM_LINDROID_EVDI=y" >> arch/arm64/configs/gki_defconfig
           
           patch --batch --forward -p1 -F 3 < ../patch/evdi_drm.patch
+
+      - name: Apply Docker support
+        if: inputs.docker
+        run: |
+          cd sm8650
+
+          echo ">>> 正在启用 Docker 容器支持（能力清单与 DANGER 说明见 patch/docker.config 头）..."
+          cat ../patch/docker.config >> arch/arm64/configs/gki_defconfig
+          # fix_cgroup.patch 仅在同时启用 Droidspaces 时套用（纯 Docker 不碰源码）
+          if [[ "${{ inputs.droidspaces }}" != "none" ]]; then
+            patch -p1 -F 3 < ../patch/fix_cgroup.patch || true
+          fi
 
       - name: Fix extract-cert key_pass compatibility
         run: |
@@ -360,6 +377,10 @@ jobs:
             ZIP_PREFIX="${ZIP_PREFIX}-dss"
           elif [[ "${{ inputs.droidspaces }}" == "extended" ]]; then
             ZIP_PREFIX="${ZIP_PREFIX}-dss-ext"
+          fi
+
+          if [[ "${{ inputs.docker }}" == "true" ]]; then
+            ZIP_PREFIX="${ZIP_PREFIX}-docker"
           fi
           
           ZIP_NAME="${{ matrix.rom_source }}-${ZIP_PREFIX}-Floran-$(date -u +"%m%d")"

@@ -38,6 +38,12 @@ on:
         required: true
         type: string
 
+      docker:
+        description: "Docker Container Support (see patch/docker.config for DANGER notes)"
+        required: false
+        type: boolean
+        default: false
+
       kernel_name:
         description: "Custom Kernel Name"
         required: false
@@ -202,6 +208,19 @@ jobs:
             echo "Droidspaces Extended patch applied to DerpFest."
           else
             patch -p1 -F 3 < ../patch/evdi_drm.patch || true
+          fi
+
+      - name: Apply Docker support
+        if: inputs.docker
+        run: |
+          cd sm8650
+
+          echo ">>> 正在启用 Docker 容器支持（能力清单与 DANGER 说明见 patch/docker.config 头）..."
+          cat ../patch/docker.config >> arch/arm64/configs/gki_defconfig
+          # fix_cgroup.patch 是 LXC/Droidspaces 专用源码补丁，仅在同时启用 Droidspaces 时套用（纯 Docker 不碰源码）。
+          if [[ "${{ inputs.droidspaces }}" != "none" ]]; then
+            echo ">>> Droidspaces 已启用，应用 fix_cgroup.patch..."
+            patch -p1 -F 3 < ../patch/fix_cgroup.patch || true
           fi
 
       - name: Fix extract-cert key_pass compatibility
@@ -491,6 +510,11 @@ jobs:
             ZIP_PREFIX="${ZIP_PREFIX}-dss"
           elif [[ "${{ inputs.droidspaces }}" == "extended" ]]; then
             ZIP_PREFIX="${ZIP_PREFIX}-dss-ext"
+          fi
+
+          # 添加 Docker 标记
+          if [[ "${{ inputs.docker }}" == "true" ]]; then
+            ZIP_PREFIX="${ZIP_PREFIX}-docker"
           fi
 
           ZIP_NAME="${{ inputs.rom_source }}-A${{ inputs.android_version }}-${ZIP_PREFIX}-$(date -u +"%m%d")"

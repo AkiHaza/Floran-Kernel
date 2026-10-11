@@ -28,6 +28,7 @@
   - IPSet 与 IPv6 NAT
   - Droidspaces 容器支持
   - Droidspaces Extended：额外启用虚拟 HCI、systemd-coredump 相关配置及 Lindroid EVDI DRM
+  - Docker 容器支持（单一开关，默认关闭；⚠️ 部分机型有 bootloop 风险，详见 `patch/docker.config` 头注释）
 - 使用 AOSP Clang 编译：Android 17 工作流使用 `clang-r596125`，Android 16 与矩阵构建工作流使用 `clang-r563880c`
 - 通过 AnyKernel3 输出可刷写 ZIP
 - 支持上传 Actions Artifact，并可自动创建 GitHub Release
@@ -56,6 +57,7 @@
 | `Enable IPSET & IPv6_NAT` | 启用 IPSet、IPv6 NAT 及相关 Netfilter 配置；FrierenKernel 忽略此选项。 |
 | `Enable BBR & ECN` | 启用 BBR、ECN 与 FQ；FrierenKernel 忽略此选项。 |
 | `Droidspaces Container Support` | 选择 `none`、`standard` 或 `extended` 容器支持。YAAP 不应用 Droidspaces 补丁。 |
+| `Docker Container Support` | ⚠️ DANGER：追加 `patch/docker.config` 单一片段（namespaces/cgroup v2/USER_NS/overlay/btrfs），可能导致部分机型 bootloop。 |
 | `Custom Kernel Name` | 设置内核附加版本名。脚本会自动补上 `-` 前缀。 |
 | `创建 GitHub Release？` | 是否在构建成功后创建并上传 GitHub Release。 |
 
@@ -120,7 +122,7 @@ Android 17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://gi
 单独构建的 ZIP 大致遵循：
 
 ```text
-<ROM 源码>-A<Android 版本>-<KSU 方案>[-dss|-dss-ext]-<UTC 月日>.zip
+<ROM 源码>-A<Android 版本>-<KSU 方案>[-dss|-dss-ext][-docker]-<UTC 月日>.zip
 ```
 
 其中：
@@ -128,6 +130,7 @@ Android 17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://gi
 - `A16` / `A17`：对应工作流的 Android 版本；Actions Artifact 与 Release 也会显示版本，便于区分同名 ROM。
 - `dss`：Droidspaces Standard
 - `dss-ext`：Droidspaces Extended
+- `docker`：启用 Docker 容器支持
 
 ## 本地构建
 

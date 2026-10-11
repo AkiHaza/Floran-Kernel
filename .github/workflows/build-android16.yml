@@ -53,6 +53,12 @@ on:
           - "standard"
           - "extended"
 
+      docker:
+        description: "⚠️ DANGER: Docker support (namespaces/cgroup v2/USER_NS/overlay/btrfs). May bootloop some devices! No bridge/nftables/IPVS/CFS_BANDWIDTH (confirmed bootloop on sm8650)."
+        required: true
+        type: boolean
+        default: false
+
       kernel_name:
         description: "Custom Kernel Name"
         required: false
@@ -81,6 +87,7 @@ jobs:
       netfilter: ${{ inputs.netfilter }}
       ccm: ${{ inputs.ccm }}
       droidspaces: ${{ inputs.droidspaces }}
+      docker: ${{ inputs.docker }}
       kernel_name: ${{ inputs.kernel_name }}
       create_release: ${{ inputs.create_release }}
     secrets: inherit
