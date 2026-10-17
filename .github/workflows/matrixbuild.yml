@@ -36,7 +36,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        rom_source: [Crdroid, LineageOS]
+        rom_source: [YAAP-17, FrierenKernel, Crdroid, LineageOS]
         ksu_type: [KernelSU-Next-susfs, BakaSU-susfs]
       fail-fast: false
 
@@ -55,7 +55,13 @@ jobs:
           
       - name: Clone Kernel Source and Download Clang Toolchain
         run: |
-          if [[ "${{ matrix.rom_source }}" == "LineageOS" ]]; then
+          if [[ "${{ matrix.rom_source }}" == "YAAP-17" ]]; then
+            git clone --depth=1 -b seventeen https://github.com/AkiHaza/android_kernel_oneplus_sm8650.git sm8650
+            git clone --depth=1 -b seventeen https://github.com/AkiHaza/android_kernel_oneplus_sm8650-modules.git sm8650-modules
+          elif [[ "${{ matrix.rom_source }}" == "FrierenKernel" ]]; then
+            git clone --depth=1 -b lineage-24.0 https://github.com/AkiHaza/custom_kernel_oneplus_sm8650.git sm8650
+            git clone --depth=1 -b lineage-24.0 https://github.com/AkiHaza/custom_kernel_oneplus_sm8650-modules.git sm8650-modules
+          elif [[ "${{ matrix.rom_source }}" == "LineageOS" ]]; then
             git clone --depth=1 -b lineage-23.2 https://github.com/LineageOS/android_kernel_oneplus_sm8650.git sm8650
             git clone --depth=1 -b lineage-23.2 https://github.com/LineageOS/android_kernel_oneplus_sm8650-modules.git sm8650-modules
           elif [[ "${{ matrix.rom_source }}" == "Crdroid" ]]; then
@@ -66,8 +72,13 @@ jobs:
             exit 1
           fi
 
-          CLANG_VERSION="clang-r563880c"
-          CLANG_URL="https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r563880c/linux-x86-refs_heads_android16-qpr2-release-clang-r563880c.tar.gz"
+          if [[ "${{ matrix.rom_source }}" == "YAAP-17" || "${{ matrix.rom_source }}" == "FrierenKernel" ]]; then
+            CLANG_VERSION="clang-r596125"
+            CLANG_URL="https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r596125/linux-x86-refs_heads_android17-release-clang-r596125.tar.gz"
+          else
+            CLANG_VERSION="clang-r563880c"
+            CLANG_URL="https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r563880c/linux-x86-refs_heads_android16-qpr2-release-clang-r563880c.tar.gz"
+          fi
 
           mkdir -p "toolchains/${CLANG_VERSION}"
           cd toolchains
@@ -81,7 +92,7 @@ jobs:
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Apply lz4 patch
-        if: inputs.lz4_enable
+        if: inputs.lz4_enable && matrix.rom_source != 'YAAP-17' && matrix.rom_source != 'FrierenKernel'
         run: |
           cd sm8650
           if git apply --check -p1 < ../patch/lz4.patch 2>/dev/null; then
@@ -93,7 +104,7 @@ jobs:
           fi
 
       - name: Apply Droidspaces patches
-        if: inputs.droidspaces != 'none'
+        if: inputs.droidspaces != 'none' && matrix.rom_source != 'YAAP-17'
         run: |
           cd sm8650
           
@@ -112,12 +123,18 @@ jobs:
           echo "CONFIG_NTSYNC=y" >> ./arch/arm64/configs/gki_defconfig
           
           echo ">>> 应用 Droidspaces 补丁..."
-          patch --batch --forward -p1 -F 3 < ../patch/fix_sysvipc_kabi_6_7_8.patch
-          patch --batch --forward -p1 -F 3 < ../patch/ntsync_base.patch
-          patch --batch --forward -p1 -F 3 < ../patch/ntsync_compat_android14-6.1.patch
+          if [[ "${{ matrix.rom_source }}" == "FrierenKernel" ]]; then
+            patch --batch --forward -p1 -F 3 < ../patch/fix_sysvipc_kabi_6_7_8.patch || true
+            patch --batch --forward -p1 -F 3 < ../patch/ntsync_base.patch || true
+            patch --batch --forward -p1 -F 3 < ../patch/ntsync_compat_android14-6.1.patch || true
+          else
+            patch --batch --forward -p1 -F 3 < ../patch/fix_sysvipc_kabi_6_7_8.patch
+            patch --batch --forward -p1 -F 3 < ../patch/ntsync_base.patch
+            patch --batch --forward -p1 -F 3 < ../patch/ntsync_compat_android14-6.1.patch
+          fi
 
       - name: Apply Droidspaces Extended patches
-        if: inputs.droidspaces == 'extended'
+        if: inputs.droidspaces == 'extended' && matrix.rom_source != 'YAAP-17'
         run: |
           cd sm8650
           
@@ -126,7 +143,11 @@ jobs:
           echo "CONFIG_STATIC_USERMODEHELPER=n" >> arch/arm64/configs/gki_defconfig
           echo "CONFIG_DRM_LINDROID_EVDI=y" >> arch/arm64/configs/gki_defconfig
           
-          patch --batch --forward -p1 -F 3 < ../patch/evdi_drm.patch
+          if [[ "${{ matrix.rom_source }}" == "FrierenKernel" ]]; then
+            patch --batch --forward -p1 -F 3 < ../patch/evdi_drm.patch || true
+          else
+            patch --batch --forward -p1 -F 3 < ../patch/evdi_drm.patch
+          fi
 
       - name: Apply Docker support
         if: inputs.docker
@@ -136,7 +157,7 @@ jobs:
           echo ">>> 正在启用 Docker 容器支持（能力清单与 DANGER 说明见 patch/docker.config 头）..."
           cat ../patch/docker.config >> arch/arm64/configs/gki_defconfig
           # fix_cgroup.patch 仅在同时启用 Droidspaces 时套用（纯 Docker 不碰源码）
-          if [[ "${{ inputs.droidspaces }}" != "none" ]]; then
+          if [[ "${{ inputs.droidspaces }}" != "none" && "${{ matrix.rom_source }}" != "YAAP-17" ]]; then
             patch -p1 -F 3 < ../patch/fix_cgroup.patch || true
           fi
 
@@ -145,37 +166,48 @@ jobs:
           cd sm8650
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path("certs/extract-cert.c")
           text = path.read_text()
-          guarded_decl = """#ifdef USE_PKCS11_ENGINE
-          static const char *key_pass;
-          #endif"""
-          guarded_assignment = """#ifdef USE_PKCS11_ENGINE
-          \tkey_pass = getenv("KBUILD_SIGN_PIN");
-          #endif"""
-          declaration = "static const char *key_pass;"
-          assignment = '\tkey_pass = getenv("KBUILD_SIGN_PIN");'
+          guard = r"(?:#ifdef\s+USE_PKCS11_ENGINE|#if\s+defined\s*\(\s*USE_PKCS11_ENGINE\s*\))"
+          declaration = re.compile(
+              rf"(?m)^(?P<indent>[ \t]*){guard}[ \t]*\r?\n"
+              r"(?P<body>[ \t]*)static\s+const\s+char\s+\*\s*key_pass\s*;[ \t]*\r?\n"
+              r"(?P=indent)#endif[ \t]*(?:\r?\n|$)"
+          )
+          assignment = re.compile(
+              rf"(?m)^(?P<indent>[ \t]*){guard}[ \t]*\r?\n"
+              r"(?P<body>[ \t]*)key_pass\s*=\s*getenv\s*\(\s*"
+              r"\"KBUILD_SIGN_PIN\"\s*\)\s*;[ \t]*\r?\n"
+              r"(?P=indent)#endif[ \t]*(?:\r?\n|$)"
+          )
 
-          has_guarded_decl = guarded_decl in text
-          has_guarded_assignment = guarded_assignment in text
-          if has_guarded_decl and has_guarded_assignment:
-              text = text.replace(guarded_decl, declaration, 1)
-              text = text.replace(guarded_assignment, assignment, 1)
+          text, declaration_count = declaration.subn(
+              lambda match: f"{match.group('body')}static const char *key_pass;\n",
+              text,
+              count=1,
+          )
+          text, assignment_count = assignment.subn(
+              lambda match: f'{match.group("body")}key_pass = getenv("KBUILD_SIGN_PIN");\n',
+              text,
+              count=1,
+          )
+
+          if declaration_count or assignment_count:
               path.write_text(text)
               print("Fixed extract-cert.c key_pass guards")
-          elif not has_guarded_decl and not has_guarded_assignment \
-                  and declaration in text and assignment in text:
-              print("extract-cert.c key_pass layout is already compatible")
           else:
-              raise SystemExit(
-                  "Unsupported extract-cert.c layout: refusing key_pass fix"
-              )
+              print("extract-cert.c key_pass layout is already compatible")
           PY
 
       - name: Compile Kernel
         run: |
-          CLANG_VERSION="clang-r563880c"
+          if [[ "${{ matrix.rom_source }}" == "YAAP-17" || "${{ matrix.rom_source }}" == "FrierenKernel" ]]; then
+            CLANG_VERSION="clang-r596125"
+          else
+            CLANG_VERSION="clang-r563880c"
+          fi
           CLANG_ROOT="${GITHUB_WORKSPACE}/toolchains/${CLANG_VERSION}/bin"
           export PATH="${CLANG_ROOT}:$PATH"
           export ARCH=arm64
@@ -319,44 +351,48 @@ jobs:
           sed -i "s|CONFIG_MODULE_SIG_PROTECT=y|CONFIG_MODULE_SIG_PROTECT=n|" arch/arm64/configs/gki_defconfig
           echo "CONFIG_TMPFS_XATTR=y" >> arch/arm64/configs/gki_defconfig
 
-          echo "CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE=y" >> arch/arm64/configs/gki_defconfig
+          if [[ "${{ matrix.rom_source }}" != "YAAP-17" && "${{ matrix.rom_source }}" != "FrierenKernel" ]]; then
+            echo "CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE=y" >> arch/arm64/configs/gki_defconfig
+          fi
 
-          echo "CONFIG_TCP_CONG_ADVANCED=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_TCP_CONG_BBR=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_NET_SCH_FQ=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_TCP_CONG_BIC=n" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_TCP_CONG_WESTWOOD=n" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_TCP_CONG_HTCP=n" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_ECN=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_TCP_ECN=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IPV6_ECN=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_NF_TARGET_ECN=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_BPF_STREAM_PARSER=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_NETFILTER_XT_SET=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_MAX=65534" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_BITMAP_IP=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_BITMAP_IPMAC=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_BITMAP_PORT=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_HASH_IP=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_HASH_IPMARK=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_HASH_IPPORT=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_HASH_IPPORTIP=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_HASH_IPPORTNET=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_HASH_IPMAC=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_HASH_MAC=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_HASH_NETPORTNET=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_HASH_NET=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_HASH_NETNET=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_HASH_NETPORT=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_HASH_NETIFACE=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP_SET_LIST_SET=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP6_NF_NAT=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IP6_NF_TARGET_MASQUERADE=y" >> arch/arm64/configs/gki_defconfig
-          
-          echo "Applying IPv6_NAT Fix..."
-          git apply ../patch/ipv6fix.patch
+          if [[ "${{ matrix.rom_source }}" != "FrierenKernel" ]]; then
+            echo "CONFIG_TCP_CONG_ADVANCED=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_TCP_CONG_BBR=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_NET_SCH_FQ=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_TCP_CONG_BIC=n" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_TCP_CONG_WESTWOOD=n" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_TCP_CONG_HTCP=n" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_ECN=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_TCP_ECN=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IPV6_ECN=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_NF_TARGET_ECN=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_BPF_STREAM_PARSER=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_NETFILTER_XT_SET=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_MAX=65534" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_BITMAP_IP=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_BITMAP_IPMAC=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_BITMAP_PORT=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_HASH_IP=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_HASH_IPMARK=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_HASH_IPPORT=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_HASH_IPPORTIP=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_HASH_IPPORTNET=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_HASH_IPMAC=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_HASH_MAC=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_HASH_NETPORTNET=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_HASH_NET=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_HASH_NETNET=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_HASH_NETPORT=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_HASH_NETIFACE=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP_SET_LIST_SET=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP6_NF_NAT=y" >> arch/arm64/configs/gki_defconfig
+            echo "CONFIG_IP6_NF_TARGET_MASQUERADE=y" >> arch/arm64/configs/gki_defconfig
+
+            echo "Applying IPv6_NAT Fix..."
+            git apply ../patch/ipv6fix.patch
+          fi
 
           CUSTOM_NAME="-FloranKernel-OSS"
           echo "CONFIG_LOCALVERSION=\"${CUSTOM_NAME}\"" >> arch/arm64/configs/gki_defconfig
@@ -373,10 +409,12 @@ jobs:
             ZIP_PREFIX="BakaSU-SUSFS"
           fi
           
-          if [[ "${{ inputs.droidspaces }}" == "standard" ]]; then
-            ZIP_PREFIX="${ZIP_PREFIX}-dss"
-          elif [[ "${{ inputs.droidspaces }}" == "extended" ]]; then
-            ZIP_PREFIX="${ZIP_PREFIX}-dss-ext"
+          if [[ "${{ matrix.rom_source }}" != "YAAP-17" ]]; then
+            if [[ "${{ inputs.droidspaces }}" == "standard" ]]; then
+              ZIP_PREFIX="${ZIP_PREFIX}-dss"
+            elif [[ "${{ inputs.droidspaces }}" == "extended" ]]; then
+              ZIP_PREFIX="${ZIP_PREFIX}-dss-ext"
+            fi
           fi
 
           if [[ "${{ inputs.docker }}" == "true" ]]; then
@@ -444,8 +482,8 @@ jobs:
             
             | Field | Value |
             |---|---|
-            |    ROM 支持   | Crdroid, LineageOS |
-            | Clang | [clang-r563880c](https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r563880c/linux-x86-refs_heads_android16-qpr2-release-clang-r563880c.tar.gz) |
+            |    ROM 支持   | YAAP-17, FrierenKernel, Crdroid, LineageOS |
+            | Clang | Android 17: [clang-r596125](https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r596125/linux-x86-refs_heads_android17-release-clang-r596125.tar.gz); Android 16: [clang-r563880c](https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r563880c/linux-x86-refs_heads_android16-qpr2-release-clang-r563880c.tar.gz) |
             | KernelSU 方案 |      KernelSU-Next, BakaSU       |
             |   Build时间   |       ${{ env.TIME_FORM }}        |
 

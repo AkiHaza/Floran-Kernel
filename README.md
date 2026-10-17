@@ -29,7 +29,7 @@
   - Droidspaces 容器支持
   - Droidspaces Extended：额外启用虚拟 HCI、systemd-coredump 相关配置及 Lindroid EVDI DRM
   - Docker 容器支持（单一开关，默认关闭；⚠️ 部分机型有 bootloop 风险，详见 `patch/docker.config` 头注释）
-- 使用 AOSP Clang 编译：Android 17 工作流使用 `clang-r596125`，Android 16 与矩阵构建工作流使用 `clang-r563880c`
+- 使用 AOSP Clang 编译：Android 17 源码使用 `clang-r596125`，Android 16 源码使用 `clang-r563880c`
 - 通过 AnyKernel3 输出可刷写 ZIP
 - 支持上传 Actions Artifact，并可自动创建 GitHub Release
 
@@ -65,7 +65,7 @@
 
 单独构建工作流使用以下上游与分支：
 
-矩阵构建工作流仅构建 `crDroid` 与 `LineageOS`，不包含 YAAP。
+矩阵构建工作流构建 `YAAP-17`、`FrierenKernel`、`crDroid` 与 `LineageOS`；其中 YAAP-17 和 FrierenKernel 使用 Android 17 的 `clang-r596125`，其余源码使用 Android 16 的 `clang-r563880c`。YAAP-17 跳过 LZ4、Droidspaces 与通用性能优化，FrierenKernel 跳过 LZ4、BBR/ECN/FQ、IPSet/IPv6 NAT 和通用性能优化，但保留 Droidspaces 选项。
 
 Android 17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r596125/linux-x86-refs_heads_android17-release-clang-r596125.tar.gz)
 
@@ -143,7 +143,7 @@ sudo apt install -y \
   lz4 git python3 curl dwarves cpio gcc-aarch64-linux-gnu
 ```
 
-编译 Android 17 内核时使用 Release 中的 `clang-r596125` 工具链产物，Android 16 与矩阵构建使用 `clang-r563880c`，并执行：
+编译 Android 17 内核时使用 Release 中的 `clang-r596125` 工具链产物，Android 16 内核使用 `clang-r563880c`，并执行：
 
 ```bash
 make O=out gki_defconfig vendor/pineapple_GKI.config vendor/oplus/pineapple_GKI.config
