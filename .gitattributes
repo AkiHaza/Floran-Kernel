@@ -1,0 +1,3 @@
+.github/scripts/*.sh text eol=lf
+.github/scripts/*.py text eol=lf
+tests/*.py text eol=lf

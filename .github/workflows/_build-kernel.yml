@@ -75,6 +75,10 @@ jobs:
           sudo apt update
           sudo apt install -y bc bison flex libssl-dev libelf-dev libdw-dev build-essential lz4 git python3 curl dwarves cpio gcc-aarch64-linux-gnu
 
+      - name: Test SUSFS integration helpers
+        if: inputs.ksu_type == 'KernelSU-Official-susfs'
+        run: python3 -m unittest discover -s tests -v
+
       - name: Clone Kernel Source and Download Clang Toolchain
         run: |
           if [[ "${{ inputs.rom_source }}" == "YAAP" && "${{ inputs.android_version }}" == "16" ]]; then
@@ -295,7 +299,9 @@ jobs:
             curl -fLSs "https://raw.githubusercontent.com/Baka-SU/BakaSU/main/kernel/setup.sh" | bash -s main
           fi
 
-          if [[ "${{ inputs.ksu_type }}" == *susfs ]]; then
+          if [[ "${{ inputs.ksu_type }}" == "KernelSU-Official-susfs" ]]; then
+            bash ../.github/scripts/integrate-susfs.sh source "${{ inputs.ksu_type }}"
+          elif [[ "${{ inputs.ksu_type }}" == *susfs ]]; then
             # Apply the original SUSFS gki-android14-6.1 patch from simonpunk.
             git clone --depth=1 -b gki-android14-6.1 https://gitlab.com/simonpunk/susfs4ksu.git susfs
             cd susfs
@@ -410,7 +416,9 @@ jobs:
 
           fi
 
-
+          if [[ "${{ inputs.ksu_type }}" == "KernelSU-Official-susfs" ]]; then
+            echo "CONFIG_KSU=y" >> arch/arm64/configs/gki_defconfig
+          fi
           if [[ "${{ inputs.ksu_type }}" == *susfs ]]; then
             echo "CONFIG_KSU_SUSFS=y" >> arch/arm64/configs/gki_defconfig
             echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> arch/arm64/configs/gki_defconfig
@@ -485,7 +493,24 @@ jobs:
           fi
 
           make O=out gki_defconfig vendor/pineapple_GKI.config vendor/oplus/pineapple_GKI.config
+          if [[ "${{ inputs.ksu_type }}" == "KernelSU-Official-susfs" ]]; then
+            bash ../.github/scripts/integrate-susfs.sh config out
+          fi
           make -j$(nproc) O=out Image
+          if [[ "${{ inputs.ksu_type }}" == "KernelSU-Official-susfs" ]]; then
+            bash ../.github/scripts/integrate-susfs.sh built out
+          fi
+
+      - name: Upload SUSFS verification evidence
+        if: ${{ success() && inputs.ksu_type == 'KernelSU-Official-susfs' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: SUSFS_Evidence_A${{ inputs.android_version }}_${{ inputs.rom_source }}_${{ inputs.ksu_type }}
+          include-hidden-files: true
+          if-no-files-found: error
+          path: |
+            sm8650/out/.config
+            sm8650/out/System.map
 
       - name: Make AnyKernel3
         run: |

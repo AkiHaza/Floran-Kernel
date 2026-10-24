@@ -100,6 +100,10 @@ Android 17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://gi
 
 由于不同 ROM 源码的 include 上下文可能不同，工作流会通过内联 shell 逻辑补齐 `fs/namespace.c` 和 `fs/super.c` 所需的 SUSFS 声明，并仅接受已知的 include 冲突；出现其他补丁 reject 时会直接终止构建，避免生成不完整的 SUSFS 内核。
 
+`KernelSU-Official-susfs` 通过统一入口 `.github/scripts/integrate-susfs.sh` 的 `source/config/built` 三个阶段完成集成及校验：检查并应用上游 `KernelSU/10_enable_susfs_for_ksu.patch`，补齐官方 KernelSU 侧的配置及接口，并记录两端源码提交。内核补丁在临时目录验证全部新增片段后才写回，仅适配已知的 `fs/exec.c` 参数／栈对象差异及 namespace/super 声明上下文；任何未解决的功能冲突都会终止构建并保留 reject。
+
+仅官方 SUSFS 方案在合并 vendor 配置后核实最终 `out/.config`，编译后检查 `fs/susfs.o`、`vmlinux`、`Image` 与 `System.map` 的关键静态键符号，校验通过才打包，并上传 `SUSFS_Evidence_*`（最终配置及符号表）。上述检查不替代刷机后的运行验证。
+
 刷入集成 KernelSU 的内核后，请安装与所选方案相对应的管理器：
 
 - [KernelSU](https://github.com/tiann/KernelSU)
