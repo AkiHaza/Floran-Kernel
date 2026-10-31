@@ -721,7 +721,7 @@ new file mode 100644
 index 000000000000..99560d868d17
 --- /dev/null
 +++ b/drivers/gpu/drm/evdi/evdi_drv.h
-@@ -0,0 +1,639 @@
+@@ -0,0 +1,632 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * Copyright (C) 2012 Red Hat
@@ -1184,7 +1184,6 @@ index 000000000000..99560d868d17
 +int evdi_connector_slot(const struct evdi_device *evdi,
 +			const struct drm_connector *conn);
 +
-+/* Helpers */
 +static __always_inline bool evdi_likely_connected(struct evdi_device *evdi, int id)
 +{
 +	return likely(id >= 0 && id < LINDROID_MAX_CONNECTORS &&
@@ -1206,7 +1205,6 @@ index 000000000000..99560d868d17
 +	return READ_ONCE(priv->pending_swaps) != 0;
 +}
 +
-+/* Memory barriers */
 +static __always_inline void evdi_smp_wmb(void)
 +{
 +	smp_wmb();
@@ -1222,7 +1220,6 @@ index 000000000000..99560d868d17
 +	smp_mb();
 +}
 +
-+/* Macros */
 +#if KERNEL_VERSION(4, 11, 0) <= LINUX_VERSION_CODE
 +#define EVDI_HAVE_DRM_OPEN_CLOSE 1
 +#else
@@ -1249,7 +1246,6 @@ index 000000000000..99560d868d17
 +
 +#define EVDI_MAX_INFLIGHT_REQUESTS 1000
 +
-+/* Debug and statistics */
 +#ifdef DEBUG
 +#define evdi_debug(fmt, ...) \
 +	pr_debug("[evdi-lindroid] " fmt "\n", ##__VA_ARGS__)
@@ -1266,7 +1262,6 @@ index 000000000000..99560d868d17
 +#define evdi_err(fmt, ...) \
 +	pr_err("[evdi-lindroid] " fmt "\n", ##__VA_ARGS__)
 +
-+/* Performance counters for monitoring */
 +DECLARE_STATIC_KEY_FALSE(evdi_perf_key);
 +extern bool evdi_perf_on;
 +#define EVDI_PERF_ENABLED() static_branch_unlikely(&evdi_perf_key)
@@ -1288,7 +1283,6 @@ index 000000000000..99560d868d17
 +
 +extern struct evdi_perf_counters evdi_perf;
 +
-+/* Queue wakeup helpers */
 +static __always_inline bool evdi_events_inc_and_test_first(struct evdi_device *evdi)
 +{
 +	int qsz;
@@ -1357,7 +1351,6 @@ index 000000000000..99560d868d17
 +	EVDI_PERF_INC64(&evdi_perf.wakeup_count);
 +}
 +
-+/* External vm_ops */
 +extern const struct vm_operations_struct evdi_gem_vm_ops;
 +
 +#endif /* __EVDI_DRV_H__ */

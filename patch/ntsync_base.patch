@@ -3,7 +3,7 @@ new file mode 100644
 index 0000000..d95c737
 --- /dev/null
 +++ b/drivers/misc/ntsync.c
-@@ -0,0 +1,1272 @@
+@@ -0,0 +1,1266 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * ntsync.c - Kernel driver for NT synchronization primitives
@@ -988,7 +988,6 @@ index 0000000..d95c737
 +	if (args.alert)
 +		total_count++;
 +
-+	/* queue ourselves */
 +
 +	for (i = 0; i < total_count; i++) {
 +		struct ntsync_q_entry *entry = &q->entries[i];
@@ -1018,11 +1017,9 @@ index 0000000..d95c737
 +		ntsync_unlock_obj(dev, obj, all);
 +	}
 +
-+	/* sleep */
 +
 +	ret = ntsync_schedule(q, &args);
 +
-+	/* and finally, unqueue */
 +
 +	for (i = 0; i < total_count; i++) {
 +		struct ntsync_q_entry *entry = &q->entries[i];
@@ -1067,7 +1064,6 @@ index 0000000..d95c737
 +	if (ret < 0)
 +		return ret;
 +
-+	/* queue ourselves */
 +
 +	mutex_lock(&dev->wait_all_lock);
 +
@@ -1114,11 +1110,9 @@ index 0000000..d95c737
 +		}
 +	}
 +
-+	/* sleep */
 +
 +	ret = ntsync_schedule(q, &args);
 +
-+	/* and finally, unqueue */
 +
 +	mutex_lock(&dev->wait_all_lock);
 +

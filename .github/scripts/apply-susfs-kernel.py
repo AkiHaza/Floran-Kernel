@@ -268,7 +268,6 @@ def apply_kernel_patch(root, patch_path, patch_command="patch"):
             raise PatchError("GNU patch reported failure without a reject; refusing success")
         for file_patch in adapted:
             verify_additions(file_patch, (stage / file_patch.path).read_text(encoding="utf-8"))
-        # Validation is complete. Existing rejects/backups in root are untouched.
         for file_patch in adapted:
             shutil.copyfile(stage / file_patch.path, root / file_patch.path)
     print(f"SUSFS: all {len(files)} patched files and complete additions verified")
