@@ -95,12 +95,27 @@ jobs:
         if: inputs.lz4_enable && matrix.rom_source != 'YAAP-17' && matrix.rom_source != 'FrierenKernel'
         run: |
           cd sm8650
-          if git apply --check -p1 < ../patch/lz4.patch 2>/dev/null; then
-            cp ../patch/lz4opt.S lib/
-            git apply -p1 < ../patch/lz4.patch
-            echo "LZ4 1.10.0 patch applied."
+          patch_file=../patch/lz4.patch
+          if [[ "${{ matrix.rom_source }}" == "LineageOS" ]]; then
+            patch_file=../patch/lz4-lineage.patch
+            echo "Using the Android 6.1 compatible LZ4 patch for ${{ matrix.rom_source }}."
+          fi
+
+          if [[ "${{ matrix.rom_source }}" == "LineageOS" ]]; then
+            git apply --check -p1 < "$patch_file"
+            git apply -p1 < "$patch_file"
+            test -f include/linux/lz4.h
+            test -f lib/lz4/lz4.c
+            test -f lib/lz4/lz4armv8/lz4accel.h
+            echo "LZ4 1.10.0 Android 6.1 patch applied to ${{ matrix.rom_source }} (generic C fallback)."
           else
-            echo "LZ4 patch not compatible with ${{ matrix.rom_source }} source; skipping (stock GKI LZ4 retained)."
+            if git apply --check -p1 < "$patch_file" 2>/dev/null; then
+              cp ../patch/lz4opt.S lib/
+              git apply -p1 < "$patch_file"
+              echo "LZ4 1.10.0 patch applied."
+            else
+              echo "LZ4 patch not compatible with ${{ matrix.rom_source }} source; skipping (stock GKI LZ4 retained)."
+            fi
           fi
 
       - name: Apply Droidspaces patches
@@ -390,8 +405,14 @@ jobs:
             echo "CONFIG_IP6_NF_NAT=y" >> arch/arm64/configs/gki_defconfig
             echo "CONFIG_IP6_NF_TARGET_MASQUERADE=y" >> arch/arm64/configs/gki_defconfig
 
-            echo "Applying IPv6_NAT Fix..."
-            git apply ../patch/ipv6fix.patch
+            if git apply --check ../patch/ipv6fix.patch >/dev/null 2>&1; then
+              echo "Applying IPv6_NAT Fix..."
+              git apply ../patch/ipv6fix.patch
+            elif git apply --reverse --check ../patch/ipv6fix.patch >/dev/null 2>&1; then
+              echo "IPv6_NAT Fix is already present."
+            else
+              echo "IPv6_NAT Fix is not compatible with this kernel source; keeping the source config_data implementation."
+            fi
           fi
 
           CUSTOM_NAME="-FloranKernel-OSS"

@@ -479,8 +479,14 @@ jobs:
           fi
 
           if [[ "${{ inputs.netfilter }}" == "true" && "${{ inputs.rom_source }}" != "FrierenKernel" ]]; then
-            echo "Applying IPv6_NAT Fix..."
-            git apply ../patch/ipv6fix.patch
+            if git apply --check ../patch/ipv6fix.patch >/dev/null 2>&1; then
+              echo "Applying IPv6_NAT Fix..."
+              git apply ../patch/ipv6fix.patch
+            elif git apply --reverse --check ../patch/ipv6fix.patch >/dev/null 2>&1; then
+              echo "IPv6_NAT Fix is already present."
+            else
+              echo "IPv6_NAT Fix is not compatible with this kernel source; keeping the source config_data implementation."
+            fi
           fi
 
           if [[ -n "${{ inputs.kernel_name }}" ]]; then
