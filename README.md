@@ -98,7 +98,9 @@ Android 17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://gi
 
 选择带 `susfs` 的方案时，工作流会拉取 [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) 的 `gki-android14-6.1` 分支，并启用 SUSFS 相关配置。
 
-由于不同 ROM 源码的 include 上下文可能不同，工作流会通过内联 shell 逻辑补齐 `fs/namespace.c` 和 `fs/super.c` 所需的 SUSFS 声明，并仅接受已知的 include 冲突；出现其他补丁 reject 时会直接终止构建，避免生成不完整的 SUSFS 内核。
+所有 SUSFS 方案均通过 `.github/scripts/apply-susfs-kernel.py` 在临时目录验证并应用内核补丁，兼容 YAAP 的栈上 `linux_binprm`、`bprm_execve` 参数差异及 `fs/namespace.c`、`fs/super.c` 的声明上下文。完整 hook 校验通过才写回，未知冲突会直接终止构建，不会丢弃功能补丁。矩阵构建使用同一处理器。
+
+SUSFS 的凭据切换辅助函数与其调用方统一受 `CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER` 控制，避免 BakaSU 尚未提供此可选功能时触发未使用函数错误；保留内核 `Werror` 检查。兼容补丁在源码布局未知或不完整时会终止构建。
 
 `KernelSU-Official-susfs` 通过统一入口 `.github/scripts/integrate-susfs.sh` 的 `source/config/built` 三个阶段完成集成及校验：检查并应用上游 `KernelSU/10_enable_susfs_for_ksu.patch`，补齐官方 KernelSU 侧的配置及接口，并记录两端源码提交。内核补丁在临时目录验证全部新增片段后才写回，仅适配已知的 `fs/exec.c` 参数／栈对象差异及 namespace/super 声明上下文；任何未解决的功能冲突都会终止构建并保留 reject。
 

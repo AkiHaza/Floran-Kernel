@@ -52,6 +52,9 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y bc bison flex libssl-dev libelf-dev libdw-dev build-essential lz4 git python3 curl dwarves cpio gcc-aarch64-linux-gnu
+
+      - name: Test SUSFS integration helpers
+        run: python3 -m unittest discover -s tests -v
           
       - name: Clone Kernel Source and Download Clang Toolchain
         run: |
@@ -248,110 +251,12 @@ jobs:
           cp ./kernel_patches/include/linux/* ../include/linux/
           cd ..
 
-          # Preserve rejects from optional patches that ran earlier.  The
-          # inline repair validates only rejects created by SUSFS.
-          find . -type f -name '*.rej' -print > ../susfs-rejects-before.txt
-          patch_status=0
-          patch --batch --forward -p1 < 50_add_susfs_in_gki-android14-6.1.patch || patch_status=$?
-          if [[ "${patch_status}" -gt 1 ]]; then
-            echo "SUSFS patch command failed with a fatal error (status ${patch_status})."
-            exit "${patch_status}"
-          fi
+          # Adapt the stack-allocated bprm in YAAP and verify every SUSFS hunk
+          # before changing the live kernel source. Unknown rejects are fatal.
+          python3 ../.github/scripts/apply-susfs-kernel.py \
+            50_add_susfs_in_gki-android14-6.1.patch
 
-          repair_susfs_file() {
-            local target="$1"
-            local add_cl_copy="$2"
-            local fix_file
-            local needs_fix=false
-
-            if [[ ! -f "${target}" ]] || ! grep -Eq 'susfs_is_|DEFAULT_KSU_MNT_|susfs_mnt_' "${target}"; then
-              echo "SUSFS functional code is missing from ${target}."
-              exit 1
-            fi
-
-            # Remove declarations used by older SUSFS revisions before
-            # installing the declarations required by the current patch.
-            sed -i -E \
-              -e '/^[[:space:]]*extern[[:space:]]+bool[[:space:]]+susfs_is_current_ksu_domain/d' \
-              -e '/^[[:space:]]*extern[[:space:]]+bool[[:space:]]+susfs_is_sdcard_android_data_(not_)?decrypted/d' \
-              "${target}"
-
-            fix_file="$(mktemp)"
-            echo '#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT' > "${fix_file}"
-            if ! grep -Eq '^#include[[:space:]]+<linux/susfs_def.h>' "${target}"; then
-              echo '#include <linux/susfs_def.h>' >> "${fix_file}"
-              needs_fix=true
-            fi
-            if ! grep -Eq '^#include[[:space:]]+<linux/jump_label.h>' "${target}"; then
-              echo '#include <linux/jump_label.h>' >> "${fix_file}"
-              needs_fix=true
-            fi
-            if ! grep -Eq '^[[:space:]]*(extern[[:space:]]+)?bool[[:space:]]+susfs_is_current_ksu_domain[[:space:]]*\([[:space:]]*void[[:space:]]*\)[[:space:]]*;' "${target}"; then
-              echo 'extern bool susfs_is_current_ksu_domain(void);' >> "${fix_file}"
-              needs_fix=true
-            fi
-            if ! grep -Eq '^[[:space:]]*(extern[[:space:]]+)?struct[[:space:]]+static_key_(true|false)[[:space:]]+susfs_is_sdcard_android_data_not_decrypted[[:space:]]*;' "${target}"; then
-              echo 'extern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;' >> "${fix_file}"
-              needs_fix=true
-            fi
-            if [[ "${add_cl_copy}" == true ]] && ! grep -Eq '^#define[[:space:]]+CL_COPY_MNT_NS[[:space:]]+BIT\(25\)' "${target}"; then
-              echo '#ifndef CL_COPY_MNT_NS' >> "${fix_file}"
-              echo '#define CL_COPY_MNT_NS BIT(25)' >> "${fix_file}"
-              echo '#endif' >> "${fix_file}"
-              needs_fix=true
-            fi
-            echo '#endif' >> "${fix_file}"
-
-            if [[ "${needs_fix}" == true ]]; then
-              if ! grep -q '#include "internal.h"' "${target}"; then
-                echo "Could not find the include insertion point in ${target}."
-                rm -f "${fix_file}"
-                exit 1
-              fi
-              sed -i "/#include \"internal.h\"/r ${fix_file}" "${target}"
-              echo "Repaired SUSFS declarations in ${target}."
-            fi
-            rm -f "${fix_file}"
-          }
-
-          repair_susfs_file fs/namespace.c true
-          repair_susfs_file fs/super.c false
-
-          while IFS= read -r reject; do
-            case "${reject}" in
-              ./fs/namespace.c.rej|./fs/super.c.rej)
-                if ! grep -q '^@@' "${reject}"; then
-                  echo "SUSFS reject has no patch hunk: ${reject}"
-                  exit 1
-                fi
-                if ! grep '^+' "${reject}" | grep -Eqi 'susfs|cl_copy_mnt_ns|default_ksu_mnt'; then
-                  echo "Unexpected SUSFS reject content: ${reject}"
-                  exit 1
-                fi
-                rm -f "${reject}"
-                ;;
-              *)
-                if ! grep -Fxq "${reject}" ../susfs-rejects-before.txt; then
-                  echo "SUSFS patch has an unexpected reject: ${reject}"
-                  exit 1
-                fi
-                ;;
-            esac
-          done < <(find . -type f -name '*.rej' -print)
-
-          test -f include/linux/susfs_def.h
-          if [[ "$(grep -o 'susfs_is_current_ksu_domain' fs/namespace.c | wc -l)" -lt 2 ]] || \
-             [[ "$(grep -o 'CL_COPY_MNT_NS' fs/namespace.c | wc -l)" -lt 2 ]] || \
-             [[ "$(grep -o 'susfs_is_current_ksu_domain' fs/super.c | wc -l)" -lt 2 ]] || \
-             [[ "$(grep -o 'susfs_is_sdcard_android_data_not_decrypted' fs/super.c | wc -l)" -lt 2 ]]; then
-            echo "A required SUSFS functional hunk is missing."
-            exit 1
-          fi
-          grep -q 'DEFAULT_KSU_MNT_MINOR_DEV' fs/super.c
-          if [[ "${patch_status}" -ne 0 ]]; then
-            echo "SUSFS patch had expected source-context conflicts; compatibility repair completed."
-          fi
-
+          bash ../.github/scripts/patch-susfs-optional-helpers.sh
           echo "CONFIG_KSU_SUSFS=y" >> arch/arm64/configs/gki_defconfig
           echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> arch/arm64/configs/gki_defconfig
           echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> arch/arm64/configs/gki_defconfig
