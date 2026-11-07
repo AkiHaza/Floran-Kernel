@@ -36,7 +36,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        rom_source: [YAAP-17, FrierenKernel, Crdroid, LineageOS]
+        rom_source: [YAAP-17, FrierenKernel, Crdroid-17, LineageOS]
         ksu_type: [KernelSU-Next-susfs, BakaSU-susfs]
       fail-fast: false
 
@@ -67,15 +67,15 @@ jobs:
           elif [[ "${{ matrix.rom_source }}" == "LineageOS" ]]; then
             git clone --depth=1 -b lineage-23.2 https://github.com/LineageOS/android_kernel_oneplus_sm8650.git sm8650
             git clone --depth=1 -b lineage-23.2 https://github.com/LineageOS/android_kernel_oneplus_sm8650-modules.git sm8650-modules
-          elif [[ "${{ matrix.rom_source }}" == "Crdroid" ]]; then
-            git clone --depth=1 -b 16.0 https://github.com/crdroidandroid/android_kernel_oneplus_sm8650.git sm8650
-            git clone --depth=1 -b 16.0 https://github.com/crdroidandroid/android_kernel_oneplus_sm8650-modules.git sm8650-modules
+          elif [[ "${{ matrix.rom_source }}" == "Crdroid-17" ]]; then
+            git clone --depth=1 -b 17.0 https://github.com/crdroidandroid/android_kernel_oneplus_sm8650.git sm8650
+            git clone --depth=1 -b 17.0 https://github.com/crdroidandroid/android_kernel_oneplus_sm8650-modules.git sm8650-modules
           else
             echo "Unsupported ROM source: ${{ matrix.rom_source }}" >&2
             exit 1
           fi
 
-          if [[ "${{ matrix.rom_source }}" == "YAAP-17" || "${{ matrix.rom_source }}" == "FrierenKernel" ]]; then
+          if [[ "${{ matrix.rom_source }}" == "YAAP-17" || "${{ matrix.rom_source }}" == "FrierenKernel" || "${{ matrix.rom_source }}" == "Crdroid-17" ]]; then
             CLANG_VERSION="clang-r596125"
             CLANG_URL="https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r596125/linux-x86-refs_heads_android17-release-clang-r596125.tar.gz"
           else
@@ -221,7 +221,7 @@ jobs:
 
       - name: Compile Kernel
         run: |
-          if [[ "${{ matrix.rom_source }}" == "YAAP-17" || "${{ matrix.rom_source }}" == "FrierenKernel" ]]; then
+          if [[ "${{ matrix.rom_source }}" == "YAAP-17" || "${{ matrix.rom_source }}" == "FrierenKernel" || "${{ matrix.rom_source }}" == "Crdroid-17" ]]; then
             CLANG_VERSION="clang-r596125"
           else
             CLANG_VERSION="clang-r563880c"
@@ -408,7 +408,7 @@ jobs:
             
             | Field | Value |
             |---|---|
-            |    ROM 支持   | YAAP-17, FrierenKernel, Crdroid, LineageOS |
+            |    ROM 支持   | YAAP-17, FrierenKernel, Crdroid-17, LineageOS |
             | Clang | Android 17: [clang-r596125](https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r596125/linux-x86-refs_heads_android17-release-clang-r596125.tar.gz); Android 16: [clang-r563880c](https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r563880c/linux-x86-refs_heads_android16-qpr2-release-clang-r563880c.tar.gz) |
             | KernelSU 方案 |      KernelSU-Next, BakaSU       |
             |   Build时间   |       ${{ env.TIME_FORM }}        |

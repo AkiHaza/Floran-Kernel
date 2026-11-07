@@ -109,6 +109,10 @@ jobs:
             git clone --depth=1 -b 16.0 https://github.com/crdroidandroid/android_kernel_oneplus_sm8650.git sm8650
             git clone --depth=1 -b 16.0 https://github.com/crdroidandroid/android_kernel_oneplus_sm8650-modules.git sm8650-modules
 
+          elif [[ "${{ inputs.rom_source }}" == "Crdroid" && "${{ inputs.android_version }}" == "17" ]]; then
+            git clone --depth=1 -b 17.0 https://github.com/crdroidandroid/android_kernel_oneplus_sm8650.git sm8650
+            git clone --depth=1 -b 17.0 https://github.com/crdroidandroid/android_kernel_oneplus_sm8650-modules.git sm8650-modules
+
           elif [[ "${{ inputs.rom_source }}" == "PixelOS" && "${{ inputs.android_version }}" == "16" ]]; then
             git clone --depth=1 -b sixteen-qpr2 https://github.com/PixelOS-Devices/android_kernel_oneplus_sm8650.git sm8650
             git clone --depth=1 -b sixteen-qpr2 https://github.com/PixelOS-Devices/android_kernel_oneplus_sm8650-modules.git sm8650-modules

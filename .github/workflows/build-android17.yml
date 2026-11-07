@@ -12,6 +12,7 @@ on:
           - DerpFest
           - LineageOS
           - FrierenKernel
+          - Crdroid
 
       ksu_type:
         description: "KernelSU Version"

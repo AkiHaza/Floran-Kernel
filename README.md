@@ -13,7 +13,7 @@
   - YAAP（Android 16 / 17）
   - LineageOS（Android 16 / 17）
   - FrierenKernel（Android 17，LineageOS 优化版）
-  - crDroid
+  - crDroid（Android 16 / 17）
   - PixelOS
   - DerpFest（Android 17）
 - 支持多种 Root 内核方案：
@@ -50,7 +50,7 @@
 | 参数 | 说明 |
 |---|---|
 | `Build Android16 Kernel` | 选择并构建 `YAAP`、`LineageOS`、`Crdroid` 或 `PixelOS` 内核；该工作流提供 LZ4、Droidspaces 等通用选项。 |
-| `Build Android17 Kernel` | 选择并构建 `YAAP`、`DerpFest`、`LineageOS` 或 `FrierenKernel` 内核；Android 17 工作流固定使用 `clang-r596125`，FrierenKernel 的可选增强仅保留 Droidspaces。 |
+| `Build Android17 Kernel` | 选择并构建 `YAAP`、`DerpFest`、`LineageOS`、`FrierenKernel` 或 `Crdroid` 内核；Android 17 工作流固定使用 `clang-r596125`，FrierenKernel 的可选增强仅保留 Droidspaces。 |
 | `ROM Kernel Source Code` / `Android 17 Kernel Source Code` | 在对应 Android 版本的工作流中选择内核源码；ROM 选项不带版本后缀，由工作流内部的 `android_version` 区分源码分支与工具链。 |
 | `KernelSU Version` | 选择 KernelSU 集成方案，或选择 `None` 构建非 KernelSU 内核。 |
 | `Enable lz4 1.10.0 patch` | 为非 YAAP/FrierenKernel 源码应用 LZ4 1.10.0 补丁；LineageOS 与 DerpFest 使用 Android 6.1 兼容适配，并在缺少厂商加速目录时回退到通用 C 解码。 |
@@ -65,7 +65,7 @@
 
 单独构建工作流使用以下上游与分支：
 
-矩阵构建工作流构建 `YAAP-17`、`FrierenKernel`、`crDroid` 与 `LineageOS`；其中 YAAP-17 和 FrierenKernel 使用 Android 17 的 `clang-r596125`，其余源码使用 Android 16 的 `clang-r563880c`。YAAP-17 跳过 LZ4、Droidspaces 与通用性能优化，FrierenKernel 跳过 LZ4、BBR/ECN/FQ、IPSet/IPv6 NAT 和通用性能优化，但保留 Droidspaces 选项。
+矩阵构建工作流构建 `YAAP-17`、`FrierenKernel`、`Crdroid-17` 与 `LineageOS`；其中 YAAP-17、FrierenKernel 和 Crdroid-17 使用 Android 17 的 `clang-r596125`，LineageOS 使用 Android 16 的 `clang-r563880c`。矩阵不再构建 crDroid 16，仍可通过单独构建工作流选择。YAAP-17 跳过 LZ4、Droidspaces 与通用性能优化，FrierenKernel 跳过 LZ4、BBR/ECN/FQ、IPSet/IPv6 NAT 和通用性能优化，但保留 Droidspaces 选项。
 
 Android 17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r596125/linux-x86-refs_heads_android17-release-clang-r596125.tar.gz)
 
@@ -77,6 +77,7 @@ Android 17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://gi
 | 17 | LineageOS | [`LineageOS/android_kernel_oneplus_sm8650`](https://github.com/LineageOS/android_kernel_oneplus_sm8650) / `lineage-24.0` | [`LineageOS/android_kernel_oneplus_sm8650-modules`](https://github.com/LineageOS/android_kernel_oneplus_sm8650-modules) / `lineage-24.0` |
 | 17 | FrierenKernel | [`AkiHaza/custom_kernel_oneplus_sm8650`](https://github.com/AkiHaza/custom_kernel_oneplus_sm8650) / `lineage-24.0` | [`AkiHaza/custom_kernel_oneplus_sm8650-modules`](https://github.com/AkiHaza/custom_kernel_oneplus_sm8650-modules) / `lineage-24.0` |
 | 16 | Crdroid | [`crdroidandroid/android_kernel_oneplus_sm8650`](https://github.com/crdroidandroid/android_kernel_oneplus_sm8650) / `16.0` | [`crdroidandroid/android_kernel_oneplus_sm8650-modules`](https://github.com/crdroidandroid/android_kernel_oneplus_sm8650-modules) / `16.0` |
+| 17 | Crdroid | [`crdroidandroid/android_kernel_oneplus_sm8650`](https://github.com/crdroidandroid/android_kernel_oneplus_sm8650) / `17.0` | [`crdroidandroid/android_kernel_oneplus_sm8650-modules`](https://github.com/crdroidandroid/android_kernel_oneplus_sm8650-modules) / `17.0` |
 | 16 | PixelOS | [`PixelOS-Devices/android_kernel_oneplus_sm8650`](https://github.com/PixelOS-Devices/android_kernel_oneplus_sm8650) / `sixteen-qpr2` | [`PixelOS-Devices/android_kernel_oneplus_sm8650-modules`](https://github.com/PixelOS-Devices/android_kernel_oneplus_sm8650-modules) / `sixteen-qpr2` |
 | 17 | DerpFest | [`ppanzenboeck/android_kernel_oneplus_sm8650`](https://github.com/ppanzenboeck/android_kernel_oneplus_sm8650) / `lineage-23.2` | [`ppanzenboeck/android_kernel_oneplus_sm8650-modules`](https://github.com/ppanzenboeck/android_kernel_oneplus_sm8650-modules) / `derp16.2-arb` |
 
