@@ -53,6 +53,9 @@
 | `Build Android17 Kernel` | 选择并构建 `YAAP`、`DerpFest`、`LineageOS`、`FrierenKernel` 或 `Crdroid` 内核；Android 17 工作流固定使用 `clang-r596125`，FrierenKernel 的可选增强仅保留 Droidspaces。 |
 | `ROM Kernel Source Code` / `Android 17 Kernel Source Code` | 在对应 Android 版本的工作流中选择内核源码；ROM 选项不带版本后缀，由工作流内部的 `android_version` 区分源码分支与工具链。 |
 | `KernelSU Version` | 选择 KernelSU 集成方案，或选择 `None` 构建非 KernelSU 内核。 |
+| `ksu_branch` | 单独构建时指定所选 KernelSU 方案的源码分支；留空使用默认值。例如 BakaSU 可填写 `sync-up`。 |
+| `bakasu_branch` / `kernelsu_next_branch` | 矩阵构建中分别覆盖 BakaSU、KernelSU-Next 的源码分支，互不影响；留空使用各自默认值。 |
+| `susfs_branch` | SUSFS 源码分支；留空或填写 `stable` 使用对应 KMI 的稳定分支，填写 `dev` 使用对应 KMI 的开发分支，也可填写完整分支名。仅带 `susfs` 的方案使用此参数。 |
 | `Enable lz4 1.10.0 patch` | 为非 YAAP/FrierenKernel 源码应用 LZ4 1.10.0 补丁；LineageOS 与 DerpFest 使用 Android 6.1 兼容适配，并在缺少厂商加速目录时回退到通用 C 解码。 |
 | `Enable IPSET & IPv6_NAT` | 启用 IPSet、IPv6 NAT 及相关 Netfilter 配置；FrierenKernel 忽略此选项。 |
 | `Enable BBR & ECN` | 启用 BBR、ECN 与 FQ；FrierenKernel 忽略此选项。 |
@@ -97,7 +100,19 @@ Android 17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://gi
 | `BakaSU-susfs` | BakaSU + SUSFS |
 | `None` | 不集成 KernelSU |
 
-选择带 `susfs` 的方案时，工作流会拉取 [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) 的 `gki-android14-6.1` 分支，并启用 SUSFS 相关配置。
+单独构建可通过 `ksu_branch` 覆盖所选方案的分支。例如选择 `BakaSU-susfs` 并填写 `ksu_branch=sync-up`，即可使用 BakaSU 的 `sync-up` 分支。矩阵构建通过 `bakasu_branch` 和 `kernelsu_next_branch` 分别设置两个方案，避免将 BakaSU 的分支名套用到 KernelSU-Next。留空时，KernelSU Official、BakaSU 使用 `main`；KernelSU-Next 使用现有 pershoot 仓库的 `dev-susfs`。选择 `None` 时忽略分支输入。
+
+工作流先克隆指定分支，再执行该分支的 `kernel/setup.sh`，并核对最终分支、提交及驱动链接；分支不存在或安装后切换到其他分支时会终止构建。KernelSU 保留完整提交历史，以便正确计算版本号；实际分支和提交会写入 Actions 日志与摘要。
+
+选择带 `susfs` 的方案时，工作流会从内核源码的 `build.config.constants`（或其他 `build.config` 元数据）读取 KMI，并与 Makefile 的内核版本核对，再拉取 [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) 的匹配分支。KMI 与 ROM 的 Android 版本分别处理；当前源码即使面向 Android 17，仍使用 `android14-6.1` KMI。
+
+| `susfs_branch` 输入 | `android14-6.1` KMI 对应分支 |
+|---|---|
+| 留空 / `stable` | `gki-android14-6.1` |
+| `dev` | `gki-android14-6.1-dev` |
+| `gki-android14-6.1-dev` | 使用指定的完整分支名，并验证其 KMI 匹配 |
+
+例如单独构建填写 `ksu_branch=sync-up`、`susfs_branch=dev`，或矩阵构建填写 `bakasu_branch=sync-up`、`susfs_branch=dev`。稳定版与 dev 版都按 KMI 选择补丁文件 `50_add_susfs_in_gki-android14-6.1.patch`，文件名不附加 `-dev`。无法识别 KMI、分支 KMI 不匹配或缺少对应补丁时会终止构建；官方 SUSFS 方案与其他方案使用同一分支选择逻辑。
 
 所有 SUSFS 方案均通过 `.github/scripts/apply-susfs-kernel.py` 在临时目录验证并应用内核补丁，兼容 YAAP 的栈上 `linux_binprm`、`bprm_execve` 参数差异及 `fs/namespace.c`、`fs/super.c` 的声明上下文。完整 hook 校验通过才写回，未知冲突会直接终止构建，不会丢弃功能补丁。矩阵构建使用同一处理器。
 

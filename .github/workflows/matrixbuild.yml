@@ -3,6 +3,21 @@ name: Matrix Build
 on:
   workflow_dispatch:
     inputs:
+      bakasu_branch:
+        description: "BakaSU branch (empty = main; example: sync-up)"
+        required: false
+        type: string
+        default: ""
+      kernelsu_next_branch:
+        description: "KernelSU-Next branch (empty = dev-susfs)"
+        required: false
+        type: string
+        default: ""
+      susfs_branch:
+        description: "SUSFS branch (empty = KMI stable; dev = KMI dev; or full branch name)"
+        required: false
+        type: string
+        default: ""
       lz4_enable:
         description: "Enable lz4 1.10.0 patch"
         required: true
@@ -220,6 +235,11 @@ jobs:
           PY
 
       - name: Compile Kernel
+        env:
+          KSU_TYPE: ${{ matrix.ksu_type }}
+          BAKASU_BRANCH: ${{ inputs.bakasu_branch }}
+          KERNELSU_NEXT_BRANCH: ${{ inputs.kernelsu_next_branch }}
+          SUSFS_BRANCH: ${{ inputs.susfs_branch }}
         run: |
           if [[ "${{ matrix.rom_source }}" == "YAAP-17" || "${{ matrix.rom_source }}" == "FrierenKernel" || "${{ matrix.rom_source }}" == "Crdroid-17" ]]; then
             CLANG_VERSION="clang-r596125"
@@ -237,24 +257,23 @@ jobs:
 
           cd sm8650
 
-          if [[ "${{ matrix.ksu_type }}" == KernelSU-Next-susfs ]]; then
-            curl -fLSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
-          elif [[ "${{ matrix.ksu_type }}" == BakaSU-susfs ]]; then
-            curl -fLSs "https://raw.githubusercontent.com/Baka-SU/BakaSU/main/kernel/setup.sh" | bash -s main
+          if [[ "$KSU_TYPE" == BakaSU-susfs ]]; then
+            KSU_BRANCH=$BAKASU_BRANCH
+          else
+            KSU_BRANCH=$KERNELSU_NEXT_BRANCH
           fi
+          bash ../.github/scripts/setup-kernelsu.sh "$KSU_TYPE" "$KSU_BRANCH"
 
-          # Apply the original SUSFS gki-android14-6.1 patch from simonpunk.
-          git clone --depth=1 -b gki-android14-6.1 https://gitlab.com/simonpunk/susfs4ksu.git susfs
-          cd susfs
-          cp ./kernel_patches/50_add_susfs_in_gki-android14-6.1.patch ..
-          cp ./kernel_patches/fs/* ../fs/
-          cp ./kernel_patches/include/linux/* ../include/linux/
-          cd ..
+          # Apply the selected upstream SUSFS patch for the source KMI.
+          source ../.github/scripts/susfs-source.sh
+          prepare_susfs_source "${SUSFS_BRANCH:-}"
+          cp susfs/kernel_patches/fs/* fs/
+          cp susfs/kernel_patches/include/linux/* include/linux/
 
           # Adapt the stack-allocated bprm in YAAP and verify every SUSFS hunk
           # before changing the live kernel source. Unknown rejects are fatal.
           python3 ../.github/scripts/apply-susfs-kernel.py \
-            50_add_susfs_in_gki-android14-6.1.patch
+            "$SUSFS_PATCH"
 
           bash ../.github/scripts/patch-susfs-optional-helpers.sh
           echo "CONFIG_KSU_SUSFS=y" >> arch/arm64/configs/gki_defconfig

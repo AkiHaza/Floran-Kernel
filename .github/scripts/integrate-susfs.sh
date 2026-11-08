@@ -89,15 +89,15 @@ integrate_source() {
   fi
   script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 
-  git clone --depth=1 -b gki-android14-6.1 https://gitlab.com/simonpunk/susfs4ksu.git susfs
-  echo "SUSFS source commit: $(git -C susfs rev-parse HEAD)"
+  source "$script_dir/susfs-source.sh"
+  prepare_susfs_source "${SUSFS_BRANCH:-}"
   echo "KernelSU source commit: $(git -C drivers/kernelsu rev-parse HEAD)"
 
   apply_ksu_patch "$ksu_type" susfs
   cp susfs/kernel_patches/fs/* fs/
   cp susfs/kernel_patches/include/linux/* include/linux/
   python3 "$script_dir/apply-susfs-kernel.py" \
-    susfs/kernel_patches/50_add_susfs_in_gki-android14-6.1.patch
+    "$SUSFS_PATCH"
 
   grep '^#define SUSFS_VERSION' include/linux/susfs.h
   echo 'SUSFS source integration completed without unresolved patch hunks.'

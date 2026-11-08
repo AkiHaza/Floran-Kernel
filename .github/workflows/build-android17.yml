@@ -27,6 +27,18 @@ on:
           - BakaSU-susfs
           - None
 
+      ksu_branch:
+        description: "KernelSU branch (empty = default; BakaSU example: sync-up)"
+        required: false
+        type: string
+        default: ""
+
+      susfs_branch:
+        description: "SUSFS branch (empty = KMI stable; dev = KMI dev; or full branch name)"
+        required: false
+        type: string
+        default: ""
+
       lz4_enable:
         description: "Enable lz4 1.10.0 patch"
         required: true
@@ -84,6 +96,8 @@ jobs:
       android_version: 17
       rom_source: ${{ inputs.rom_source }}
       ksu_type: ${{ inputs.ksu_type }}
+      ksu_branch: ${{ inputs.ksu_branch }}
+      susfs_branch: ${{ inputs.susfs_branch }}
       lz4_enable: ${{ inputs.rom_source != 'YAAP' && inputs.rom_source != 'FrierenKernel' && inputs.lz4_enable }}
       netfilter: ${{ inputs.rom_source != 'FrierenKernel' && inputs.netfilter }}
       ccm: ${{ inputs.rom_source != 'FrierenKernel' && inputs.ccm }}

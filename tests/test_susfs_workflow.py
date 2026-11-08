@@ -23,7 +23,7 @@ def source_block(path):
     """Read the source-patching statements from the actual workflow."""
     lines = path.read_text(encoding="utf-8").splitlines(True)
     start = next(i for i, line in enumerate(lines)
-                 if "# Apply the original SUSFS gki-android14-6.1 patch" in line)
+                 if "# Apply the selected upstream SUSFS patch for the source KMI." in line)
     command = next(i for i in range(start, len(lines))
                    if "python3 ../.github/scripts/apply-susfs-kernel.py" in lines[i])
     end = command + 1
@@ -46,6 +46,8 @@ class SusfsWorkflowTests(unittest.TestCase):
             kernel = workspace / "kernel"
             (kernel / "fs").mkdir(parents=True)
             (kernel / "include/linux").mkdir(parents=True)
+            (kernel / "build.config.constants").write_text("BRANCH=android14-6.1\n", encoding="utf-8")
+            (kernel / "Makefile").write_text("VERSION = 6\nPATCHLEVEL = 1\n", encoding="utf-8")
             target = kernel / "fs/exec.c"
             target.write_text(source, encoding="utf-8", newline="\n")
             old_reject = kernel / "fs/exec.c.rej"
@@ -63,13 +65,20 @@ class SusfsWorkflowTests(unittest.TestCase):
             helper = workspace / ".github/scripts/apply-susfs-kernel.py"
             helper.parent.mkdir(parents=True)
             shutil.copyfile(fixtures.MODULE_PATH, helper)
+            shutil.copyfile(ROOT / ".github/scripts/susfs-source.sh", helper.parent / "susfs-source.sh")
             # Stub only acquisition; run the workflow copy/patch statements
             # using the real Python helper and GNU patch.
             script = (
                 'set -e\n'
                 'python_for_test=$1\n'
                 'python3() { "$python_for_test" "$@"; }\n'
-                'git() { [[ "$1" == clone ]]; }\n'
+                'git() { case "$1" in clone) return 0;; '
+                'check-ref-format) command git "$@";; '
+                '-C) case "$3" in '
+                'symbolic-ref) printf "%s\\n" "$SUSFS_BRANCH";; '
+                'show-ref) return 0;; '
+                'rev-parse) printf "fixture-commit\\n";; '
+                '*) return 1;; esac;; *) return 1;; esac; }\n'
                 + source_block(workflow)
             )
             environment = os.environ.copy()
