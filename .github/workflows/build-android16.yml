@@ -32,11 +32,11 @@ on:
         type: string
         default: ""
 
-      susfs_branch:
-        description: "SUSFS branch (empty = KMI stable; dev = KMI dev; or full branch name)"
+      susfs_dev:
+        description: "Use SUSFS android14-6.1 dev branch (off = stable)"
         required: false
-        type: string
-        default: ""
+        type: boolean
+        default: false
 
       lz4_enable:
         description: "Enable lz4 1.10.0 patch"
@@ -96,7 +96,7 @@ jobs:
       rom_source: ${{ inputs.rom_source }}
       ksu_type: ${{ inputs.ksu_type }}
       ksu_branch: ${{ inputs.ksu_branch }}
-      susfs_branch: ${{ inputs.susfs_branch }}
+      susfs_dev: ${{ inputs.susfs_dev }}
       lz4_enable: ${{ inputs.lz4_enable }}
       netfilter: ${{ inputs.netfilter }}
       ccm: ${{ inputs.ccm }}

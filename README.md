@@ -56,7 +56,7 @@
 | `KernelSU Version` | 选择 KernelSU 集成方案，或选择 `None` 构建非 KernelSU 内核。 |
 | `ksu_branch` | 单独构建时指定所选 KernelSU 方案的源码分支；留空使用默认值。例如 BakaSU 可填写 `sync-up`。 |
 | `bakasu_branch` / `kernelsu_next_branch` | 矩阵构建中分别覆盖 BakaSU、KernelSU-Next 的源码分支，互不影响；留空使用各自默认值。 |
-| `susfs_branch` | SUSFS 源码分支；留空或填写 `stable` 使用对应 KMI 的稳定分支，填写 `dev` 使用对应 KMI 的开发分支，也可填写完整分支名。仅带 `susfs` 的方案使用此参数。 |
+| `susfs_dev` | 布尔开关，默认关闭；开启使用 6.1 的 `gki-android14-6.1-dev` 分支，关闭使用 `gki-android14-6.1` 稳定分支。仅带 `susfs` 的方案使用此参数。 |
 | `Enable lz4 1.10.0 patch` | 为非 YAAP/FrierenKernel 源码应用 LZ4 1.10.0 补丁；LineageOS、DerpFest 与 AOSPA 使用 Android 6.1 兼容适配，并在缺少厂商加速目录时回退到通用 C 解码。 |
 | `Enable IPSET & IPv6_NAT` | 启用 IPSet、IPv6 NAT 及相关 Netfilter 配置；FrierenKernel 忽略此选项。 |
 | `Enable BBR & ECN` | 启用 BBR、ECN 与 FQ；FrierenKernel 忽略此选项。 |
@@ -108,15 +108,14 @@ AOSPA 的模块源码放在内核目录内的 `sm8650/sm8650-modules`，与其�
 
 工作流先克隆指定分支，再执行该分支的 `kernel/setup.sh`，并核对最终分支、提交及驱动链接；分支不存在或安装后切换到其他分支时会终止构建。KernelSU 保留完整提交历史，以便正确计算版本号；实际分支和提交会写入 Actions 日志与摘要。
 
-选择带 `susfs` 的方案时，工作流会从内核源码的 `build.config.constants`（或其他 `build.config` 元数据）读取 KMI，并与 Makefile 的内核版本核对，再拉取 [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) 的匹配分支。KMI 与 ROM 的 Android 版本分别处理；当前源码即使面向 Android 17，仍使用 `android14-6.1` KMI。
+选择带 `susfs` 的方案时，工作流固定使用 [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) 的 `android14-6.1` 分支系列。`susfs_dev` 只控制是否使用 dev 分支，不支持填写自定义分支名；ROM 的 Android 16 / 17 版本不影响此选择。
 
-| `susfs_branch` 输入 | `android14-6.1` KMI 对应分支 |
+| `susfs_dev` 开关 | SUSFS 分支 |
 |---|---|
-| 留空 / `stable` | `gki-android14-6.1` |
-| `dev` | `gki-android14-6.1-dev` |
-| `gki-android14-6.1-dev` | 使用指定的完整分支名，并验证其 KMI 匹配 |
+| 关闭 / `false`（默认） | `gki-android14-6.1` |
+| 开启 / `true` | `gki-android14-6.1-dev` |
 
-例如单独构建填写 `ksu_branch=sync-up`、`susfs_branch=dev`，或矩阵构建填写 `bakasu_branch=sync-up`、`susfs_branch=dev`。稳定版与 dev 版都按 KMI 选择补丁文件 `50_add_susfs_in_gki-android14-6.1.patch`，文件名不附加 `-dev`。无法识别 KMI、分支 KMI 不匹配或缺少对应补丁时会终止构建；官方 SUSFS 方案与其他方案使用同一分支选择逻辑。
+例如单独构建填写 `ksu_branch=sync-up` 并勾选 `susfs_dev`，或矩阵构建填写 `bakasu_branch=sync-up` 并勾选 `susfs_dev`。稳定版与 dev 版均使用补丁文件 `50_add_susfs_in_gki-android14-6.1.patch`，文件名不附加 `-dev`；官方 SUSFS 方案与其他方案使用同一开关。
 
 所有 SUSFS 方案均通过 `.github/scripts/apply-susfs-kernel.py` 在临时目录验证并应用内核补丁，兼容 YAAP 的栈上 `linux_binprm`、`bprm_execve` 参数差异及 `fs/namespace.c`、`fs/super.c` 的声明上下文。完整 hook 校验通过才写回，未知冲突会直接终止构建，不会丢弃功能补丁。矩阵构建使用同一处理器。
 

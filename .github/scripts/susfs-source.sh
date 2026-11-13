@@ -1,44 +1,12 @@
 #!/usr/bin/env bash
-# Source this helper from the kernel root. Do not execute build.config as code.
+# Source this helper from the kernel root.
 
 prepare_susfs_source() {
-  local requested=${1:-} commit
-  SUSFS_KMI=$(python3 - <<'PY'
-from pathlib import Path
-import re
-import sys
-
-for name in ('build.config.constants', 'build.config.common', 'build.config.gki', 'build.config'):
-    path = Path(name)
-    if not path.is_file():
-        continue
-    match = re.search(r'''(?m)^\s*(?:export\s+)?BRANCH\s*=\s*["']?(android\d+-\d+\.\d+)["']?\s*(?:#.*)?$''', path.read_text())
-    if match:
-        kmi = match.group(1)
-        makefile = Path('Makefile').read_text()
-        version = re.search(r'(?m)^VERSION\s*=\s*(\d+)\s*$', makefile)
-        patchlevel = re.search(r'(?m)^PATCHLEVEL\s*=\s*(\d+)\s*$', makefile)
-        if not version or not patchlevel or not kmi.endswith(f'-{version[1]}.{patchlevel[1]}'):
-            sys.exit(f'Kernel KMI {kmi} does not match Makefile version')
-        print(kmi)
-        break
-else:
-    sys.exit('Cannot determine kernel KMI from build.config metadata')
-PY
-  ) || return 1
-
-  case "$requested" in
-    ''|stable) SUSFS_BRANCH="gki-${SUSFS_KMI}" ;;
-    dev) SUSFS_BRANCH="gki-${SUSFS_KMI}-dev" ;;
-    *) SUSFS_BRANCH=$requested ;;
-  esac
-  if ! git check-ref-format "refs/heads/$SUSFS_BRANCH"; then
-    echo "Invalid SUSFS branch: $SUSFS_BRANCH" >&2
-    return 1
-  fi
-  if [[ $SUSFS_BRANCH != "gki-${SUSFS_KMI}" && $SUSFS_BRANCH != "gki-${SUSFS_KMI}-"* ]]; then
-    echo "SUSFS branch $SUSFS_BRANCH does not match kernel KMI $SUSFS_KMI" >&2
-    return 1
+  local dev=${1:-false} commit
+  SUSFS_KMI=android14-6.1
+  SUSFS_BRANCH="gki-${SUSFS_KMI}"
+  if [[ $dev == true ]]; then
+    SUSFS_BRANCH="${SUSFS_BRANCH}-dev"
   fi
 
   git clone --depth=1 --single-branch --branch "$SUSFS_BRANCH" \

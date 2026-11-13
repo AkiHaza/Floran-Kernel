@@ -24,11 +24,11 @@ on:
         type: string
         default: ""
 
-      susfs_branch:
-        description: SUSFS branch (empty = KMI stable; dev = KMI dev; or full branch)
+      susfs_dev:
+        description: Use SUSFS android14-6.1 dev branch (false = stable)
         required: false
-        type: string
-        default: ""
+        type: boolean
+        default: false
 
       lz4_enable:
         description: "Enable lz4 1.10.0 patch"
@@ -288,7 +288,7 @@ jobs:
         env:
           KSU_TYPE: ${{ inputs.ksu_type }}
           KSU_BRANCH: ${{ inputs.ksu_branch }}
-          SUSFS_BRANCH: ${{ inputs.susfs_branch }}
+          SUSFS_DEV: ${{ inputs.susfs_dev }}
         run: |
           if [[ "${{ inputs.android_version }}" == "17" ]]; then
             CLANG_VERSION="clang-r596125"
@@ -311,9 +311,9 @@ jobs:
           if [[ "${{ inputs.ksu_type }}" == "KernelSU-Official-susfs" ]]; then
             bash ../.github/scripts/integrate-susfs.sh source "${{ inputs.ksu_type }}"
           elif [[ "${{ inputs.ksu_type }}" == *susfs ]]; then
-            # Apply the selected upstream SUSFS patch for the source KMI.
+            # Apply the selected SUSFS android14-6.1 stable/dev patch.
             source ../.github/scripts/susfs-source.sh
-            prepare_susfs_source "${SUSFS_BRANCH:-}"
+            prepare_susfs_source "${SUSFS_DEV:-false}"
             cp susfs/kernel_patches/fs/* fs/
             cp susfs/kernel_patches/include/linux/* include/linux/
 

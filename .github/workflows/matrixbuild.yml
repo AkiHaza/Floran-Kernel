@@ -13,11 +13,11 @@ on:
         required: false
         type: string
         default: ""
-      susfs_branch:
-        description: "SUSFS branch (empty = KMI stable; dev = KMI dev; or full branch name)"
+      susfs_dev:
+        description: "Use SUSFS android14-6.1 dev branch (off = stable)"
         required: false
-        type: string
-        default: ""
+        type: boolean
+        default: false
       lz4_enable:
         description: "Enable lz4 1.10.0 patch"
         required: true
@@ -239,7 +239,7 @@ jobs:
           KSU_TYPE: ${{ matrix.ksu_type }}
           BAKASU_BRANCH: ${{ inputs.bakasu_branch }}
           KERNELSU_NEXT_BRANCH: ${{ inputs.kernelsu_next_branch }}
-          SUSFS_BRANCH: ${{ inputs.susfs_branch }}
+          SUSFS_DEV: ${{ inputs.susfs_dev }}
         run: |
           if [[ "${{ matrix.rom_source }}" == "YAAP-17" || "${{ matrix.rom_source }}" == "FrierenKernel" || "${{ matrix.rom_source }}" == "Crdroid-17" || "${{ matrix.rom_source }}" == "AOSPA" ]]; then
             CLANG_VERSION="clang-r596125"
@@ -264,9 +264,9 @@ jobs:
           fi
           bash ../.github/scripts/setup-kernelsu.sh "$KSU_TYPE" "$KSU_BRANCH"
 
-          # Apply the selected upstream SUSFS patch for the source KMI.
+          # Apply the selected SUSFS android14-6.1 stable/dev patch.
           source ../.github/scripts/susfs-source.sh
-          prepare_susfs_source "${SUSFS_BRANCH:-}"
+          prepare_susfs_source "${SUSFS_DEV:-false}"
           cp susfs/kernel_patches/fs/* fs/
           cp susfs/kernel_patches/include/linux/* include/linux/
 

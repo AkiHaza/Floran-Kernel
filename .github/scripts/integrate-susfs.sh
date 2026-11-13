@@ -90,7 +90,7 @@ integrate_source() {
   script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 
   source "$script_dir/susfs-source.sh"
-  prepare_susfs_source "${SUSFS_BRANCH:-}"
+  prepare_susfs_source "${SUSFS_DEV:-false}"
   echo "KernelSU source commit: $(git -C drivers/kernelsu rev-parse HEAD)"
 
   apply_ksu_patch "$ksu_type" susfs
