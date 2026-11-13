@@ -4,7 +4,17 @@ set -euo pipefail
 ksu_type=${1:?Missing KernelSU type}
 branch=${2:-}
 case "$ksu_type" in
-  None) exit 0 ;;
+  None)
+    # Standalone sources such as AOSPA may already reference an uninitialized
+    # KernelSU submodule. Detach its build hooks without deleting source files.
+    if [[ -f drivers/Kconfig ]]; then
+      sed -i '/^[[:space:]]*source[[:space:]]*"drivers\/kernelsu\/Kconfig"[[:space:]]*$/d' drivers/Kconfig
+    fi
+    if [[ -f drivers/Makefile ]]; then
+      sed -i '/^[[:space:]]*obj-\$(CONFIG_KSU)[[:space:]]*+=[[:space:]]*kernelsu\/[[:space:]]*$/d' drivers/Makefile
+    fi
+    exit 0
+    ;;
   KernelSU-Official|KernelSU-Official-susfs)
     repository=https://github.com/tiann/KernelSU.git
     checkout=KernelSU

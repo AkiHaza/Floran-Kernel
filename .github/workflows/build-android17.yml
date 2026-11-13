@@ -13,6 +13,7 @@ on:
           - LineageOS
           - FrierenKernel
           - Crdroid
+          - AOSPA
 
       ksu_type:
         description: "KernelSU Version"

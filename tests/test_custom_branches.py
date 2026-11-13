@@ -145,6 +145,36 @@ class KernelSUBranchTests(BranchFixture):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(list(self.kernel.iterdir()), [])
 
+    def test_none_detaches_inherited_hooks_and_preserves_existing_sources(self):
+        drivers = self.kernel / "drivers"
+        drivers.mkdir()
+        kconfig = drivers / "Kconfig"
+        makefile = drivers / "Makefile"
+        retained_kconfig = 'source "drivers/other/Kconfig"\nendmenu\n'
+        retained_makefile = 'obj-$(CONFIG_OTHER) += other/\n# kernelsu source retained\n'
+        kconfig.write_text('source "drivers/kernelsu/Kconfig"\n' + retained_kconfig,
+                           encoding="utf-8", newline="\n")
+        makefile.write_text('obj-$(CONFIG_KSU) += kernelsu/\n' + retained_makefile,
+                            encoding="utf-8", newline="\n")
+        # Reproduce an uninitialized submodule: its Kconfig does not exist.
+        result = self.setup("None")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(kconfig.read_text(), retained_kconfig)
+        self.assertEqual(makefile.read_text(), retained_makefile)
+
+        source = self.kernel / "KernelSU-Next/kernel/Kconfig"
+        source.parent.mkdir(parents=True)
+        source.write_text("config KSU\n", encoding="utf-8")
+        submodules = self.kernel / ".gitmodules"
+        submodules.write_text('[submodule "KernelSU-Next"]\n', encoding="utf-8")
+        # Repeated None builds must also preserve initialized source trees.
+        result = self.setup("None")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(kconfig.read_text(), retained_kconfig)
+        self.assertEqual(makefile.read_text(), retained_makefile)
+        self.assertEqual(source.read_text(), "config KSU\n")
+        self.assertEqual(submodules.read_text(), '[submodule "KernelSU-Next"]\n')
+
     def test_invalid_and_missing_branches_fail_before_setup(self):
         self.prepare()
         for branch in ("--cleanup", "missing-branch", "$(touch injected)", "main;touch injected"):

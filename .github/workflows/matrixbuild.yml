@@ -51,7 +51,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        rom_source: [YAAP-17, FrierenKernel, Crdroid-17, LineageOS]
+        rom_source: [YAAP-17, FrierenKernel, Crdroid-17, LineageOS, AOSPA]
         ksu_type: [KernelSU-Next-susfs, BakaSU-susfs]
       fail-fast: false
 
@@ -85,12 +85,15 @@ jobs:
           elif [[ "${{ matrix.rom_source }}" == "Crdroid-17" ]]; then
             git clone --depth=1 -b 17.0 https://github.com/crdroidandroid/android_kernel_oneplus_sm8650.git sm8650
             git clone --depth=1 -b 17.0 https://github.com/crdroidandroid/android_kernel_oneplus_sm8650-modules.git sm8650-modules
+          elif [[ "${{ matrix.rom_source }}" == "AOSPA" ]]; then
+            git clone --depth=1 -b standalone https://github.com/AkiHaza/AOSPA_kernel_oneplus.git sm8650
+            git clone --depth=1 -b standalone https://github.com/AkiHaza/AOSPA_kernel_oneplus_modules.git sm8650/sm8650-modules
           else
             echo "Unsupported ROM source: ${{ matrix.rom_source }}" >&2
             exit 1
           fi
 
-          if [[ "${{ matrix.rom_source }}" == "YAAP-17" || "${{ matrix.rom_source }}" == "FrierenKernel" || "${{ matrix.rom_source }}" == "Crdroid-17" ]]; then
+          if [[ "${{ matrix.rom_source }}" == "YAAP-17" || "${{ matrix.rom_source }}" == "FrierenKernel" || "${{ matrix.rom_source }}" == "Crdroid-17" || "${{ matrix.rom_source }}" == "AOSPA" ]]; then
             CLANG_VERSION="clang-r596125"
             CLANG_URL="https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r596125/linux-x86-refs_heads_android17-release-clang-r596125.tar.gz"
           else
@@ -114,12 +117,12 @@ jobs:
         run: |
           cd sm8650
           patch_file=../patch/lz4.patch
-          if [[ "${{ matrix.rom_source }}" == "LineageOS" ]]; then
+          if [[ "${{ matrix.rom_source }}" == "LineageOS" || "${{ matrix.rom_source }}" == "AOSPA" ]]; then
             patch_file=../patch/lz4-lineage.patch
             echo "Using the Android 6.1 compatible LZ4 patch for ${{ matrix.rom_source }}."
           fi
 
-          if [[ "${{ matrix.rom_source }}" == "LineageOS" ]]; then
+          if [[ "${{ matrix.rom_source }}" == "LineageOS" || "${{ matrix.rom_source }}" == "AOSPA" ]]; then
             git apply --check -p1 < "$patch_file"
             git apply -p1 < "$patch_file"
             test -f include/linux/lz4.h
@@ -241,7 +244,7 @@ jobs:
           KERNELSU_NEXT_BRANCH: ${{ inputs.kernelsu_next_branch }}
           SUSFS_BRANCH: ${{ inputs.susfs_branch }}
         run: |
-          if [[ "${{ matrix.rom_source }}" == "YAAP-17" || "${{ matrix.rom_source }}" == "FrierenKernel" || "${{ matrix.rom_source }}" == "Crdroid-17" ]]; then
+          if [[ "${{ matrix.rom_source }}" == "YAAP-17" || "${{ matrix.rom_source }}" == "FrierenKernel" || "${{ matrix.rom_source }}" == "Crdroid-17" || "${{ matrix.rom_source }}" == "AOSPA" ]]; then
             CLANG_VERSION="clang-r596125"
           else
             CLANG_VERSION="clang-r563880c"

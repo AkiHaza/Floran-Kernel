@@ -16,6 +16,7 @@
   - crDroid（Android 16 / 17）
   - PixelOS
   - DerpFest（Android 17）
+  - AOSPA（Android 17）
 - 支持多种 Root 内核方案：
   - KernelSU Official
   - KernelSU-Next
@@ -23,7 +24,7 @@
   - 上述方案的 SUSFS 变体（部分组合）
   - 不集成 KernelSU
 - 可选功能：
-  - LZ4 1.10.0 补丁（YAAP、FrierenKernel 不应用；LineageOS 与 DerpFest 使用 Android 6.1 兼容适配）
+  - LZ4 1.10.0 补丁（YAAP、FrierenKernel 不应用；LineageOS、DerpFest 与 AOSPA 使用 Android 6.1 兼容适配）
   - BBR、ECN 与 FQ 队列调度
   - IPSet 与 IPv6 NAT
   - Droidspaces 容器支持
@@ -50,13 +51,13 @@
 | 参数 | 说明 |
 |---|---|
 | `Build Android16 Kernel` | 选择并构建 `YAAP`、`LineageOS`、`Crdroid` 或 `PixelOS` 内核；该工作流提供 LZ4、Droidspaces 等通用选项。 |
-| `Build Android17 Kernel` | 选择并构建 `YAAP`、`DerpFest`、`LineageOS`、`FrierenKernel` 或 `Crdroid` 内核；Android 17 工作流固定使用 `clang-r596125`，FrierenKernel 的可选增强仅保留 Droidspaces。 |
+| `Build Android17 Kernel` | 选择并构建 `YAAP`、`DerpFest`、`LineageOS`、`FrierenKernel`、`Crdroid` 或 `AOSPA` 内核；Android 17 工作流固定使用 `clang-r596125`，FrierenKernel 的可选增强仅保留 Droidspaces。 |
 | `ROM Kernel Source Code` / `Android 17 Kernel Source Code` | 在对应 Android 版本的工作流中选择内核源码；ROM 选项不带版本后缀，由工作流内部的 `android_version` 区分源码分支与工具链。 |
 | `KernelSU Version` | 选择 KernelSU 集成方案，或选择 `None` 构建非 KernelSU 内核。 |
 | `ksu_branch` | 单独构建时指定所选 KernelSU 方案的源码分支；留空使用默认值。例如 BakaSU 可填写 `sync-up`。 |
 | `bakasu_branch` / `kernelsu_next_branch` | 矩阵构建中分别覆盖 BakaSU、KernelSU-Next 的源码分支，互不影响；留空使用各自默认值。 |
 | `susfs_branch` | SUSFS 源码分支；留空或填写 `stable` 使用对应 KMI 的稳定分支，填写 `dev` 使用对应 KMI 的开发分支，也可填写完整分支名。仅带 `susfs` 的方案使用此参数。 |
-| `Enable lz4 1.10.0 patch` | 为非 YAAP/FrierenKernel 源码应用 LZ4 1.10.0 补丁；LineageOS 与 DerpFest 使用 Android 6.1 兼容适配，并在缺少厂商加速目录时回退到通用 C 解码。 |
+| `Enable lz4 1.10.0 patch` | 为非 YAAP/FrierenKernel 源码应用 LZ4 1.10.0 补丁；LineageOS、DerpFest 与 AOSPA 使用 Android 6.1 兼容适配，并在缺少厂商加速目录时回退到通用 C 解码。 |
 | `Enable IPSET & IPv6_NAT` | 启用 IPSet、IPv6 NAT 及相关 Netfilter 配置；FrierenKernel 忽略此选项。 |
 | `Enable BBR & ECN` | 启用 BBR、ECN 与 FQ；FrierenKernel 忽略此选项。 |
 | `Droidspaces Container Support` | 选择 `none`、`standard` 或 `extended` 容器支持。YAAP 不应用 Droidspaces 补丁。 |
@@ -68,7 +69,7 @@
 
 单独构建工作流使用以下上游与分支：
 
-矩阵构建工作流构建 `YAAP-17`、`FrierenKernel`、`Crdroid-17` 与 `LineageOS`；其中 YAAP-17、FrierenKernel 和 Crdroid-17 使用 Android 17 的 `clang-r596125`，LineageOS 使用 Android 16 的 `clang-r563880c`。矩阵不再构建 crDroid 16，仍可通过单独构建工作流选择。YAAP-17 跳过 LZ4、Droidspaces 与通用性能优化，FrierenKernel 跳过 LZ4、BBR/ECN/FQ、IPSet/IPv6 NAT 和通用性能优化，但保留 Droidspaces 选项。
+矩阵构建工作流构建 `YAAP-17`、`FrierenKernel`、`Crdroid-17`、`LineageOS` 与 `AOSPA`；其中 YAAP-17、FrierenKernel、Crdroid-17 和 AOSPA 使用 Android 17 的 `clang-r596125`，LineageOS 使用 Android 16 的 `clang-r563880c`。矩阵不再构建 crDroid 16，仍可通过单独构建工作流选择。YAAP-17 跳过 LZ4、Droidspaces 与通用性能优化，FrierenKernel 跳过 LZ4、BBR/ECN/FQ、IPSet/IPv6 NAT 和通用性能优化，但保留 Droidspaces 选项。
 
 Android 17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://github.com/AkiHaza/Floran-Kernel/releases/download/toolchain-r596125/linux-x86-refs_heads_android17-release-clang-r596125.tar.gz)
 
@@ -83,8 +84,11 @@ Android 17 使用的 Clang 工具链产物：[`clang-r596125.tar.gz`](https://gi
 | 17 | Crdroid | [`crdroidandroid/android_kernel_oneplus_sm8650`](https://github.com/crdroidandroid/android_kernel_oneplus_sm8650) / `17.0` | [`crdroidandroid/android_kernel_oneplus_sm8650-modules`](https://github.com/crdroidandroid/android_kernel_oneplus_sm8650-modules) / `17.0` |
 | 16 | PixelOS | [`PixelOS-Devices/android_kernel_oneplus_sm8650`](https://github.com/PixelOS-Devices/android_kernel_oneplus_sm8650) / `sixteen-qpr2` | [`PixelOS-Devices/android_kernel_oneplus_sm8650-modules`](https://github.com/PixelOS-Devices/android_kernel_oneplus_sm8650-modules) / `sixteen-qpr2` |
 | 17 | DerpFest | [`ppanzenboeck/android_kernel_oneplus_sm8650`](https://github.com/ppanzenboeck/android_kernel_oneplus_sm8650) / `lineage-23.2` | [`ppanzenboeck/android_kernel_oneplus_sm8650-modules`](https://github.com/ppanzenboeck/android_kernel_oneplus_sm8650-modules) / `derp16.2-arb` |
+| 17 | AOSPA | [`AkiHaza/AOSPA_kernel_oneplus`](https://github.com/AkiHaza/AOSPA_kernel_oneplus) / `standalone` | [`AkiHaza/AOSPA_kernel_oneplus_modules`](https://github.com/AkiHaza/AOSPA_kernel_oneplus_modules) / `standalone` |
 
-在 **Build Android17 Kernel** 中，DerpFest 与 LineageOS 可勾选 LZ4 补丁，并选择 `standard` 或 `extended` Droidspaces 支持。YAAP 会忽略这两个选项。FrierenKernel 保留所选 Root/SUSFS 方案，额外增强仅保留 Droidspaces；即使勾选，也会跳过 LZ4、BBR/ECN/FQ、IPSet/IPv6 NAT 及工作流追加的通用性能配置。
+在 **Build Android17 Kernel** 中，DerpFest、LineageOS 与 AOSPA 可勾选 LZ4 补丁，并选择 `standard` 或 `extended` Droidspaces 支持。YAAP 会忽略这两个选项。FrierenKernel 保留所选 Root/SUSFS 方案，额外增强仅保留 Droidspaces；即使勾选，也会跳过 LZ4、BBR/ECN/FQ、IPSet/IPv6 NAT 及工作流追加的通用性能配置。
+
+AOSPA 的模块源码放在内核目录内的 `sm8650/sm8650-modules`，与其独立构建版 Makefile 的目录约定一致。选择 `None` 时，工作流会移除源码预置的 KernelSU Kconfig/Makefile 引用，避免未初始化的 KernelSU 子模块阻断配置生成；已有 KernelSU 源码及子模块声明会保留。当前 ZIP 仅替换内核 `Image`，不会重新构建或替换设备现有模块，因此仍须匹配对应 ROM 的模块 ABI。
 
 ## KernelSU 与 SUSFS
 
