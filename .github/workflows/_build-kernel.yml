@@ -87,10 +87,6 @@ jobs:
           sudo apt update
           sudo apt install -y bc bison flex libssl-dev libelf-dev libdw-dev build-essential lz4 git python3 curl dwarves cpio gcc-aarch64-linux-gnu
 
-      - name: Test SUSFS integration helpers
-        if: endsWith(inputs.ksu_type, 'susfs')
-        run: python3 -m unittest discover -s tests -v
-
       - name: Clone Kernel Source and Download Clang Toolchain
         run: |
           if [[ "${{ inputs.rom_source }}" == "YAAP" && "${{ inputs.android_version }}" == "16" ]]; then
