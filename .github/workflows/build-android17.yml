@@ -40,12 +40,6 @@ on:
         type: boolean
         default: false
 
-      lz4_enable:
-        description: "Enable lz4 1.10.0 patch"
-        required: true
-        type: boolean
-        default: true
-
       droidspaces:
         description: "Droidspaces Container Support"
         required: true
@@ -99,7 +93,6 @@ jobs:
       ksu_type: ${{ inputs.ksu_type }}
       ksu_branch: ${{ inputs.ksu_branch }}
       susfs_dev: ${{ inputs.susfs_dev }}
-      lz4_enable: ${{ inputs.rom_source != 'YAAP' && inputs.rom_source != 'FrierenKernel' && inputs.lz4_enable }}
       netfilter: ${{ inputs.rom_source != 'FrierenKernel' && inputs.netfilter }}
       ccm: ${{ inputs.rom_source != 'FrierenKernel' && inputs.ccm }}
       droidspaces: ${{ inputs.rom_source != 'YAAP' && inputs.droidspaces || 'none' }}

@@ -38,12 +38,6 @@ on:
         type: boolean
         default: false
 
-      lz4_enable:
-        description: "Enable lz4 1.10.0 patch"
-        required: true
-        type: boolean
-        default: true
-
       netfilter:
         description: "Enable IPSET & IPv6_NAT"
         required: true
@@ -97,7 +91,6 @@ jobs:
       ksu_type: ${{ inputs.ksu_type }}
       ksu_branch: ${{ inputs.ksu_branch }}
       susfs_dev: ${{ inputs.susfs_dev }}
-      lz4_enable: ${{ inputs.lz4_enable }}
       netfilter: ${{ inputs.netfilter }}
       ccm: ${{ inputs.ccm }}
       droidspaces: ${{ inputs.droidspaces }}
